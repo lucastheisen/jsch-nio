@@ -31,7 +31,7 @@ public class SshWatchService implements WatchService {
         this.checkIntervalTimeUnit = checkIntervalTimeUnit;
         this.pendingKeys = new LinkedBlockingDeque<WatchKey>();
         executorService = Executors.newFixedThreadPool( 1 );
-        executorService.execute( new SshDirectoryWatcher() );
+        //executorService.execute( new SshDirectoryWatcher() );
     }
     
     @Override

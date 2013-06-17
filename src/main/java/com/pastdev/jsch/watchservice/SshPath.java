@@ -7,11 +7,12 @@ import java.nio.file.WatchKey;
 import java.nio.file.WatchService;
 import java.nio.file.Watchable;
 
-public class SshDirectory implements Watchable {
+public class SshPath implements Watchable {
 
     @Override
     public WatchKey register( WatchService watcher, Kind<?>[] events, Modifier... modifiers ) throws IOException {
-        /
+        // TODO Auto-generated method stub
+        return null;
     }
 
     @Override
