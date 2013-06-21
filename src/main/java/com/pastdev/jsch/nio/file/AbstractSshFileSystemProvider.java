@@ -1,7 +1,8 @@
-package com.pastdev.jsch.nio.file.spi;
+package com.pastdev.jsch.nio.file;
 
 
 import java.io.IOException;
+import java.net.URI;
 import java.nio.file.DirectoryStream;
 import java.nio.file.Path;
 import java.nio.file.spi.FileSystemProvider;
@@ -9,6 +10,10 @@ import java.util.Iterator;
 
 
 abstract public class AbstractSshFileSystemProvider extends FileSystemProvider {
+    @Override
+    public Path getPath( URI uri ) {
+        return getFileSystem( uri ).getPath( uri.getPath() );
+    }
 
     public static class ArrayEntryDirectoryStream implements DirectoryStream<Path> {
         private String[] entries;

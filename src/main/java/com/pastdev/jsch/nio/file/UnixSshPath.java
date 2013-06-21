@@ -1,7 +1,7 @@
 package com.pastdev.jsch.nio.file;
 
 
-import static com.pastdev.jsch.nio.file.spi.UnixSshFileSystemProvider.PATH_SEPARATOR;
+import static com.pastdev.jsch.nio.file.UnixSshFileSystemProvider.PATH_SEPARATOR;
 
 
 import java.io.File;
@@ -71,6 +71,15 @@ public class UnixSshPath extends AbstractSshPath {
     public Path getFileName() {
         // TODO Auto-generated method stub
         return null;
+    }
+
+    String getFileNameString() {
+        return parts[parts.length - 1];
+    }
+
+    @Override
+    public UnixSshFileSystem getFileSystem() {
+        return (UnixSshFileSystem)super.getFileSystem();
     }
 
     @Override

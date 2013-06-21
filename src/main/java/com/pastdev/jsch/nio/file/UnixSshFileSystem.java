@@ -1,7 +1,7 @@
 package com.pastdev.jsch.nio.file;
 
 
-import static com.pastdev.jsch.nio.file.spi.UnixSshFileSystemProvider.PATH_SEPARATOR;
+import static com.pastdev.jsch.nio.file.UnixSshFileSystemProvider.PATH_SEPARATOR;
 
 
 import java.io.IOException;
@@ -15,7 +15,6 @@ import java.util.Set;
 
 
 import com.pastdev.jsch.command.CommandRunner;
-import com.pastdev.jsch.nio.file.spi.UnixSshFileSystemProvider;
 
 
 public class UnixSshFileSystem extends AbstractSshFileSystem {
@@ -91,6 +90,11 @@ public class UnixSshFileSystem extends AbstractSshFileSystem {
     public WatchService newWatchService() throws IOException {
         // TODO Auto-generated method stub
         return null;
+    }
+
+    @Override
+    public UnixSshFileSystemProvider provider() {
+        return (UnixSshFileSystemProvider)super.provider();
     }
 
     @Override

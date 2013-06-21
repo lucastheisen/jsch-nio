@@ -10,7 +10,6 @@ import java.util.Set;
 
 
 import com.pastdev.jsch.command.CommandRunner;
-import com.pastdev.jsch.nio.file.spi.AbstractSshFileSystemProvider;
 
 
 public abstract class AbstractSshFileSystem extends FileSystem {

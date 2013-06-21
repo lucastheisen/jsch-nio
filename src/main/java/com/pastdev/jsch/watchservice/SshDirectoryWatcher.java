@@ -14,9 +14,9 @@ import org.slf4j.LoggerFactory;
 
 
 import com.jcraft.jsch.JSchException;
-import com.pastdev.jsch.DestinationOs;
 import com.pastdev.jsch.SessionFactory;
 import com.pastdev.jsch.command.CommandRunner;
+import com.pastdev.jsch.scp.DestinationOs;
 
 
 abstract public class SshDirectoryWatcher implements Runnable {
@@ -42,31 +42,6 @@ abstract public class SshDirectoryWatcher implements Runnable {
 
     @Override
     public void run() {
-        CommandRunner commandRunner = null;
-        try {
-            commandRunner = new CommandRunner( sessionFactory );
-            while ( true ) {
-                try {
-                    int exitStatus = commandRunner.execute( getCommand() );
-                    if ( exitStatus == 0 ) {
-                        logger.trace( "Listed files {}:\n{}", exitStatus, commandRunner.getStdout() );
-                        for ( DirectoryEntry entry : parseCommandOutput( commandRunner.getStdout() ) ) {
-                            logger.trace( "\tentry: {}", entry );
-                        }
-                    }
-                    else {
-                        logger.error( "command failed {}: out='{}', err='{}'" );
-                    }
-                    Thread.sleep( timerUnit.toMillis( timer ) );
-                }
-                catch ( JSchException | IOException e ) {
-                    logger.error( "failed to list directory contents" );
-                }
-            }
-        }
-        catch ( InterruptedException e ) {
-            logger.error( "thread interrupted, must be shutdown." );
-        }
     }
 
     public static enum DirectoryEntryType {
