@@ -4,7 +4,6 @@ package com.pastdev.jsch.nio.file;
 import static com.pastdev.jsch.nio.file.UnixSshFileSystemProvider.PATH_SEPARATOR;
 
 
-import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 import java.nio.file.LinkOption;
@@ -28,14 +27,19 @@ public class UnixSshPath extends AbstractSshPath {
 
         // normalize path string and discover separator indexes.
         // could probably optimize this at some point...
-        if ( !path.isEmpty() ) {
+        this.absolute = false;
+        if ( path == null || path.isEmpty() ) {
+            this.parts = new String[0];
+        }
+        else {
             String[] parts = path.split( PATH_SEPARATOR + "+", 0 );
-            if ( parts[0].isEmpty() ) {
+            if ( parts.length == 0 ) {
                 this.absolute = true;
-                this.parts = Arrays.copyOfRange( parts, 1, parts.length - 1 );
-                int newLength = parts.length - 1;
-                this.parts = new String[newLength];
-                System.arraycopy( parts, 1, this.parts, 0, newLength );
+                this.parts = parts;
+            }
+            else if ( parts[0].isEmpty() ) {
+                this.absolute = true;
+                this.parts = Arrays.copyOfRange( parts, 1, parts.length );
             }
             else {
                 this.parts = parts;
@@ -182,7 +186,7 @@ public class UnixSshPath extends AbstractSshPath {
     }
 
     @Override
-    public Path normalize() {
+    public UnixSshPath normalize() {
         List<String> partsList = new ArrayList<String>();
         for ( String part : parts ) {
             if ( part.equals( "." ) ) {
@@ -215,15 +219,20 @@ public class UnixSshPath extends AbstractSshPath {
     }
 
     @Override
-    public Path relativize( Path path ) {
+    public UnixSshPath relativize( Path path ) {
         // TODO Auto-generated method stub
         return null;
     }
 
     @Override
-    public Path resolve( Path other ) {
+    public UnixSshPath resolve( Path other ) {
         if ( other.isAbsolute() ) {
-            return other;
+            if ( other instanceof UnixSshPath ) {
+                return (UnixSshPath)other;
+            }
+            else {
+                return new UnixSshPath( getFileSystem(), other.toString() );
+            }
         }
         else if ( other.getNameCount() == 0 ) {
             return this;
@@ -240,17 +249,17 @@ public class UnixSshPath extends AbstractSshPath {
     }
 
     @Override
-    public Path resolve( String other ) {
+    public UnixSshPath resolve( String other ) {
         return resolve( new UnixSshPath( getFileSystem(), other ) );
     }
 
     @Override
-    public Path resolveSibling( Path other ) {
+    public UnixSshPath resolveSibling( Path other ) {
         return getParent().resolve( other );
     }
 
     @Override
-    public Path resolveSibling( String other ) {
+    public UnixSshPath resolveSibling( String other ) {
         return resolveSibling( new UnixSshPath( getFileSystem(), other ) );
     }
 
@@ -269,7 +278,7 @@ public class UnixSshPath extends AbstractSshPath {
         if ( otherCount > count ) {
             return false;
         }
-        
+
         for ( int i = 0; i < otherCount; i++ ) {
             if ( !other.getName( i ).toString().equals( getName( i ).toString() ) ) {
                 return false;
@@ -284,8 +293,8 @@ public class UnixSshPath extends AbstractSshPath {
     }
 
     @Override
-    public Path subpath( int start, int end ) {
-        String[] parts = new String[end-start];
+    public UnixSshPath subpath( int start, int end ) {
+        String[] parts = new String[end - start];
         for ( int i = start; i < end; i++ ) {
             parts[i] = getName( i ).toString();
         }
@@ -293,7 +302,7 @@ public class UnixSshPath extends AbstractSshPath {
     }
 
     @Override
-    public Path toAbsolutePath() {
+    public UnixSshPath toAbsolutePath() {
         if ( isAbsolute() ) {
             return this;
         }
@@ -305,13 +314,7 @@ public class UnixSshPath extends AbstractSshPath {
     }
 
     @Override
-    public File toFile() {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException( "this opens up a WHOLE new can of worms.  im just not ready for that" );
-    }
-
-    @Override
-    public Path toRealPath( LinkOption... linkOptions ) throws IOException {
+    public UnixSshPath toRealPath( LinkOption... linkOptions ) throws IOException {
         // TODO Auto-generated method stub
         return null;
     }
@@ -331,6 +334,6 @@ public class UnixSshPath extends AbstractSshPath {
 
     @Override
     public URI toUri() {
-        return ((UnixSshFileSystem)getFileSystem()).getUri().resolve( toString() );
+        return ((UnixSshFileSystem)getFileSystem()).getUri().resolve( toAbsolutePath().toString() );
     }
 }

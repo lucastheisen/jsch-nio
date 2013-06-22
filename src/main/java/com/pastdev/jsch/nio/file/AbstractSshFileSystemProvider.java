@@ -25,7 +25,7 @@ abstract public class AbstractSshFileSystemProvider extends FileSystemProvider {
             accepted = new ArrayList<Path>();
             for ( String entry : entries ) {
                 Path path = parent.resolve( entry );
-                if ( filter.accept( path ) ) {
+                if ( filter == null || filter.accept( path ) ) {
                     accepted.add( path );
                 }
             }

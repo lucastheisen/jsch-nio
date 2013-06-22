@@ -2,8 +2,14 @@ package com.pastdev.jsch.nio.file;
 
 
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.net.URI;
+import java.nio.ByteBuffer;
+import java.nio.channels.Channels;
+import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.SeekableByteChannel;
+import java.nio.channels.WritableByteChannel;
 import java.nio.file.AccessDeniedException;
 import java.nio.file.AccessMode;
 import java.nio.file.AtomicMoveNotSupportedException;
@@ -19,6 +25,7 @@ import java.nio.file.NoSuchFileException;
 import java.nio.file.OpenOption;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
+import java.nio.file.StandardOpenOption;
 import java.nio.file.attribute.BasicFileAttributeView;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.nio.file.attribute.FileAttribute;
@@ -41,15 +48,21 @@ import java.util.Map;
 import java.util.Set;
 
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+
 import com.jcraft.jsch.JSchException;
 import com.jcraft.jsch.Proxy;
 import com.pastdev.jsch.SessionFactory;
 import com.pastdev.jsch.SessionFactory.SessionFactoryBuilder;
 import com.pastdev.jsch.command.CommandRunner;
+import com.pastdev.jsch.command.CommandRunner.ChannelExecWrapper;
 import com.pastdev.jsch.command.CommandRunner.ExecuteResult;
 
 
 public class UnixSshFileSystemProvider extends AbstractSshFileSystemProvider {
+    private static Logger logger = LoggerFactory.getLogger( UnixSshFileSystemProvider.class );
     private static final String ASCII_UNIT_SEPARATOR = Character.toString( (char)31 );
     private static final SupportedAttribute[] BASIC_SUPPORTED_ATTRIBUTES = new SupportedAttribute[] {
             SupportedAttribute.creationTime,
@@ -87,7 +100,7 @@ public class UnixSshFileSystemProvider extends AbstractSshFileSystemProvider {
 
     @Override
     public void checkAccess( Path path, AccessMode... modes ) throws IOException {
-        UnixSshPath unixPath = checkPath( path );
+        UnixSshPath unixPath = checkPath( path ).toAbsolutePath();
         String pathString = unixPath.toString();
 
         ExecuteResult result = execute( unixPath, "test -e " + pathString );
@@ -175,6 +188,44 @@ public class UnixSshFileSystemProvider extends AbstractSshFileSystemProvider {
         }
     }
 
+    @SuppressWarnings("unchecked")
+    PosixFileAttributes createFile( UnixSshPath path, FileAttribute<?>... fileAttributes ) throws IOException {
+        Set<PosixFilePermission> permissions = null;
+        UserPrincipal owner = null;
+        GroupPrincipal group = null;
+        for ( FileAttribute<?> fileAttribute : fileAttributes ) {
+            String name = fileAttribute.name();
+            if ( name.equals( "posix:permissions" ) ) {
+                permissions = (Set<PosixFilePermission>)fileAttribute.value();
+            }
+            else if ( name.equals( "posix:owner" ) ) {
+                owner = (UserPrincipal)fileAttribute.value();
+            }
+            else if ( name.equals( "posix:group" ) ) {
+                group = (GroupPrincipal)fileAttribute.value();
+            }
+        }
+
+        String command = "touch " + path.toString();
+        ExecuteResult result = execute( path, command );
+        if ( result.getExitCode() != 0 ) {
+            throw new IOException( "failed to " + command
+                    + " (" + result.getExitCode() + "): " + result.getStderr() );
+        }
+
+        if ( permissions != null ) {
+            setPermissions( path, permissions );
+        }
+        if ( owner != null ) {
+            setOwner( path, owner );
+        }
+        if ( group != null ) {
+            setGroup( path, group );
+        }
+
+        return readAttributes( path, PosixFileAttributes.class );
+    }
+
     @Override
     public void delete( Path path ) throws IOException {
         delete( checkPath( path ), new BasicFileAttributesImpl( path ) );
@@ -216,14 +267,24 @@ public class UnixSshFileSystemProvider extends AbstractSshFileSystemProvider {
         }
     }
 
+    UnixSshBasicFileAttributeView getFileAttributeView( Path path, String viewName, LinkOption... linkOptions ) {
+        if ( viewName.equals( "basic" ) ) {
+            return new UnixSshBasicFileAttributeView( checkPath( path ), linkOptions );
+        }
+        else if ( viewName.equals( "posix" ) ) {
+            return new UnixSshPosixFileAttributeView( checkPath( path ), linkOptions );
+        }
+        return null;
+    }
+
     @Override
     @SuppressWarnings("unchecked")
     public <V extends FileAttributeView> V getFileAttributeView( Path path, Class<V> type, LinkOption... linkOptions ) {
         if ( type == BasicFileAttributeView.class ) {
-            return (V)new UnixSshBasicFileAttributeView( checkPath( path ), linkOptions );
+            return (V)getFileAttributeView( path, "basic", linkOptions );
         }
         if ( type == PosixFileAttributeView.class ) {
-            return (V)new UnixSshPosixFileAttributeView( checkPath( path ), linkOptions );
+            return (V)getFileAttributeView( path, "posix", linkOptions );
         }
         if ( type == null ) {
             throw new NullPointerException();
@@ -234,7 +295,7 @@ public class UnixSshFileSystemProvider extends AbstractSshFileSystemProvider {
     @Override
     public FileStore getFileStore( Path arg0 ) throws IOException {
         // TODO Auto-generated method stub
-        throw new UnsupportedOperationException();
+        throw new UnsupportedOperationException( "no idea what a file store would mean in this context, so for now, you have to deal with this exception" );
     }
 
     @Override
@@ -279,14 +340,13 @@ public class UnixSshFileSystemProvider extends AbstractSshFileSystemProvider {
 
     @Override
     public SeekableByteChannel newByteChannel( Path path, Set<? extends OpenOption> openOptions, FileAttribute<?>... fileAttributes ) throws IOException {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException( "hmmm, this one is gonna be tough" );
+        return new UnixSshSeekableByteChannel( checkPath( path ), openOptions, fileAttributes );
     }
 
     @Override
     public DirectoryStream<Path> newDirectoryStream( Path path, Filter<? super Path> filter ) throws IOException {
         UnixSshPath unixPath = checkPath( path );
-        ExecuteResult result = execute( unixPath, "ls -1 " + unixPath.toString() );
+        ExecuteResult result = execute( unixPath, "ls -1 " + unixPath.toAbsolutePath().toString() );
         if ( result.getExitCode() == 0 ) {
             return new StandardDirectoryStream(
                     path, result.getStdout().split( "\n" ), filter );
@@ -341,6 +401,124 @@ public class UnixSshFileSystemProvider extends AbstractSshFileSystemProvider {
     }
 
     @Override
+    public InputStream newInputStream( Path path, OpenOption... openOptions ) throws IOException {
+        UnixSshPath unixPath = checkPath( path ).toAbsolutePath();
+        try {
+            final ChannelExecWrapper channel = unixPath.getFileSystem()
+                    .getCommandRunner().open( "cat " + unixPath.toString() );
+            return new InputStream() {
+                private InputStream inputStream = channel.getInputStream();
+
+                @Override
+                public void close() throws IOException {
+                    int exitCode = channel.close();
+                    logger.debug( "cat exited with {}", exitCode );
+                }
+
+                @Override
+                public int read() throws IOException {
+                    return inputStream.read();
+                }
+            };
+        }
+        catch ( JSchException e ) {
+            throw new IOException( e );
+        }
+    }
+
+    @Override
+    public OutputStream newOutputStream( Path path, OpenOption... openOptions ) throws IOException {
+        UnixSshPath unixPath = checkPath( path ).toAbsolutePath();
+        Set<OpenOption> options = null;
+        if ( openOptions == null || openOptions.length == 0 ) {
+            options = new HashSet<OpenOption>( Arrays.asList( new StandardOpenOption[] {
+                    StandardOpenOption.CREATE,
+                    StandardOpenOption.TRUNCATE_EXISTING,
+                    StandardOpenOption.WRITE
+            } ) );
+            logger.debug( "no open options specified, so using CREATE, TRUNCATE_EXISTING, and WRITE" );
+        }
+        else {
+            options = new HashSet<OpenOption>( Arrays.asList( openOptions ) );
+        }
+
+        if ( options.contains( StandardOpenOption.READ ) ) {
+            throw new IllegalArgumentException( "read not allowed on OutputStream, seriously..." );
+        }
+        if ( !options.contains( StandardOpenOption.WRITE ) ) {
+            throw new IllegalArgumentException( "what good is an OutputStream that you cant write to?" );
+        }
+        if ( options.contains( StandardOpenOption.DELETE_ON_CLOSE ) ) {
+            throw new UnsupportedOperationException( "not gonna implement" );
+        }
+        // ignore SYNC, DSYNC and SPARSE
+
+        try {
+            checkAccess( unixPath );
+            if ( options.contains( StandardOpenOption.CREATE_NEW ) ) {
+                throw new FileAlreadyExistsException( unixPath.toString() );
+            }
+        }
+        catch ( NoSuchFileException e ) {
+            if ( options.contains( StandardOpenOption.CREATE_NEW ) ) {
+                // this is as close to atomic create as i can get...
+                createFile( unixPath );
+            }
+            else if ( !options.contains( StandardOpenOption.CREATE ) ) {
+                throw e;
+            }
+        }
+
+        try {
+
+            StringBuilder commandBuilder = new StringBuilder( "cat " );
+            if ( options.contains( StandardOpenOption.APPEND )
+                    && !options.contains( StandardOpenOption.TRUNCATE_EXISTING ) ) {
+                commandBuilder.append( ">> " );
+            }
+            else {
+                commandBuilder.append( "> " );
+            }
+            commandBuilder.append( unixPath.toString() );
+
+            final ChannelExecWrapper channel = unixPath.getFileSystem()
+                    .getCommandRunner().open( commandBuilder.toString() );
+            return new OutputStream() {
+                private OutputStream outputStream = channel.getOutputStream();
+
+                @Override
+                public void close() throws IOException {
+                    int exitCode = channel.close();
+                    logger.debug( "cat exited with {}", exitCode );
+                }
+
+                @Override
+                public void write( int b ) throws IOException {
+                    outputStream.write( b );
+                }
+            };
+        }
+        catch ( JSchException e ) {
+            throw new IOException( e );
+        }
+    }
+
+    int read( UnixSshPath path, long startIndex, ByteBuffer bytes ) throws IOException {
+        try {
+            int read = 0;
+            ChannelExecWrapper sshChannel = path.getFileSystem().getCommandRunner().open( "dd bs=1 skip=" + startIndex + " if=" + path.toString() );
+            try (InputStream in = sshChannel.getInputStream()) {
+                ReadableByteChannel inChannel = Channels.newChannel( in );
+                read = inChannel.read( bytes );
+            }
+            return read;
+        }
+        catch ( JSchException e ) {
+            throw new IOException( e );
+        }
+    }
+
+    @Override
     @SuppressWarnings("unchecked")
     public <A extends BasicFileAttributes> A readAttributes( Path path, Class<A> type, LinkOption... linkOptions ) throws IOException {
         if ( type == BasicFileAttributes.class ) {
@@ -372,7 +550,7 @@ public class UnixSshFileSystemProvider extends AbstractSshFileSystemProvider {
     }
 
     private Map<String, Object> readAttributes( Path path, SupportedAttribute[] attributes, LinkOption... linkOptions ) throws IOException {
-        UnixSshPath unixPath = checkPath( path );
+        UnixSshPath unixPath = checkPath( path ).toAbsolutePath();
         StringBuilder commandBuilder = new StringBuilder( "stat --printf \"" );
         for ( int i = 0; i < attributes.length; i++ ) {
             if ( i > 0 ) {
@@ -380,7 +558,7 @@ public class UnixSshFileSystemProvider extends AbstractSshFileSystemProvider {
             }
             commandBuilder.append( attributes[i].option() );
         }
-        commandBuilder.append( "\" " ).append( path.toString() );
+        commandBuilder.append( "\" " ).append( unixPath.toString() );
 
         ExecuteResult result = execute( unixPath, commandBuilder.toString() );
         if ( result.getExitCode() == 0 ) {
@@ -400,9 +578,24 @@ public class UnixSshFileSystemProvider extends AbstractSshFileSystemProvider {
     }
 
     @Override
-    public void setAttribute( Path arg0, String arg1, Object arg2, LinkOption... arg3 ) throws IOException {
-        // TODO Auto-generated method stub
+    public void setAttribute( Path path, String attribute, Object value, LinkOption... linkOptions ) throws IOException {
+        String viewName = null;
+        String attributeName = null;
+        int colonIndex = attribute.indexOf( ':' );
+        if ( colonIndex < 0 ) {
+            viewName = "basic";
+            attributeName = attribute;
+        }
+        else {
+            viewName = attribute.substring( 0, colonIndex );
+            attributeName = attribute.substring( colonIndex + 1 );
+        }
 
+        UnixSshBasicFileAttributeView view = getFileAttributeView( path, viewName, linkOptions );
+        if ( view == null ) {
+            throw new UnsupportedOperationException( "unsupported view " + viewName );
+        }
+        view.setAttribute( attributeName, value );
     }
 
     void setGroup( UnixSshPath path, GroupPrincipal group ) throws IOException {
@@ -481,6 +674,40 @@ public class UnixSshFileSystemProvider extends AbstractSshFileSystemProvider {
 
     private static <T> Set<T> toSet( T[] array ) {
         return new HashSet<T>( Arrays.asList( array ) );
+    }
+
+    void truncateFile( UnixSshPath path, long size ) throws IOException {
+        String command = "truncate -s " + size + " " + path.toString();
+        ExecuteResult result = execute( path, command );
+        if ( result.getExitCode() != 0 ) {
+            throw new IOException( "failed to run " + command + " ("
+                    + result.getExitCode() + "): " + result.getStderr() );
+        }
+    }
+
+    int write( UnixSshPath path, long startIndex, ByteBuffer bytes ) throws IOException {
+        try {
+            int bytesPosition = bytes.position();
+            // TODO cache this buffer for reuse
+            ByteBuffer temp = ByteBuffer.allocateDirect( bytes.limit() - bytesPosition );
+            temp.put( bytes );
+            bytes.position( bytesPosition );
+
+            ChannelExecWrapper sshChannel = path.getFileSystem().getCommandRunner().open( "dd bs=1 seek=" + startIndex + " of=" + path.toString() );
+            int written = 0;
+            try (OutputStream out = sshChannel.getOutputStream()) {
+                WritableByteChannel outChannel = Channels.newChannel( out );
+                temp.flip();
+                written = outChannel.write( temp );
+            }
+            if ( written > 0 ) {
+                bytes.position( bytesPosition + written );
+            }
+            return written;
+        }
+        catch ( JSchException e ) {
+            throw new IOException( e );
+        }
     }
 
     private class BasicFileAttributesImpl implements BasicFileAttributes {

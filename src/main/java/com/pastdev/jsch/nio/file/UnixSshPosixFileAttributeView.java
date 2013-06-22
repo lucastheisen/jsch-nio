@@ -3,7 +3,6 @@ package com.pastdev.jsch.nio.file;
 
 import java.io.IOException;
 import java.nio.file.LinkOption;
-import java.nio.file.attribute.FileTime;
 import java.nio.file.attribute.GroupPrincipal;
 import java.nio.file.attribute.PosixFileAttributeView;
 import java.nio.file.attribute.PosixFileAttributes;
@@ -34,6 +33,22 @@ public class UnixSshPosixFileAttributeView extends UnixSshBasicFileAttributeView
                 getPath(), PosixFileAttributes.class, getOptions() );
     }
 
+    @SuppressWarnings("unchecked")
+    void setAttribute( String attributeName, Object value ) throws IOException {
+        if ( attributeName.equals( "group" ) ) {
+            setGroup( (GroupPrincipal)value );
+        }
+        else if ( attributeName.equals( "owner" ) ) {
+            setOwner( (UserPrincipal)value );
+        }
+        else if ( attributeName.equals( "permissions" ) ) {
+            setPermissions( (Set<PosixFilePermission>)value );
+        }
+        else {
+            super.setAttribute( attributeName, value );
+        }
+    }
+
     @Override
     public void setGroup( GroupPrincipal group ) throws IOException {
         getPath().getFileSystem().provider().setGroup( getPath(), group );
@@ -47,11 +62,5 @@ public class UnixSshPosixFileAttributeView extends UnixSshBasicFileAttributeView
     @Override
     public void setPermissions( Set<PosixFilePermission> permissions ) throws IOException {
         getPath().getFileSystem().provider().setPermissions( getPath(), permissions );
-    }
-
-    @Override
-    public void setTimes( FileTime lastModifiedTime, FileTime lastAccessTime, FileTime createTime ) throws IOException {
-        // create time not supported on linux, so ignore it
-        getPath().getFileSystem().provider().setTimes( getPath(), lastModifiedTime, lastAccessTime );
     }
 }

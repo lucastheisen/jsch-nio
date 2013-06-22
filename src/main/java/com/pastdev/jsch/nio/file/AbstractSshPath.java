@@ -1,6 +1,7 @@
 package com.pastdev.jsch.nio.file;
 
 
+import java.io.File;
 import java.nio.file.FileSystem;
 import java.nio.file.Path;
 
@@ -27,4 +28,8 @@ abstract public class AbstractSshPath implements Path {
 
     abstract public String getUsername();
 
+    @Override
+    public File toFile() {
+        throw new UnsupportedOperationException( "path not from default provider" );
+    }
 }

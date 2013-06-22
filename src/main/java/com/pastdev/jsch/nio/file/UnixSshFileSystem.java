@@ -52,7 +52,7 @@ public class UnixSshFileSystem extends AbstractSshFileSystem {
     }
 
     @Override
-    public Path getPath( String first, String... more ) {
+    public UnixSshPath getPath( String first, String... more ) {
         if ( more == null || more.length == 0 ) return new UnixSshPath( this, first );
 
         StringBuilder builder = new StringBuilder( first );
