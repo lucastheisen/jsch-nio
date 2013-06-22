@@ -15,15 +15,21 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.nio.ByteBuffer;
+import java.nio.channels.SeekableByteChannel;
 import java.nio.charset.Charset;
 import java.nio.file.DirectoryStream;
 import java.nio.file.DirectoryStream.Filter;
 import java.nio.file.FileSystems;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
 import java.nio.file.attribute.FileTime;
 import java.nio.file.attribute.PosixFileAttributes;
+import java.nio.file.attribute.PosixFilePermission;
+import java.nio.file.attribute.PosixFilePermissions;
 import java.util.Date;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -338,6 +344,56 @@ public class UnixSshFileSystemTest {
             logger.error( "could not read attribues from {}: {}", path, e );
             logger.debug( "could not read attributes:", e );
             fail( "could not read attributes from " + path + ": " + e.getMessage() );
+        }
+        finally {
+            IOUtils.deleteFiles( file, rootDir );
+        }
+    }
+
+    @Test
+    public void testSeekableByteChannel() {
+        String root = UUID.randomUUID().toString();
+        String filename = "outputstreamtest.txt";
+
+        File rootDir = new File( filesystemPath, root );
+        File file = new File( rootDir, filename );
+        Path filePath = FileSystems.getFileSystem( uri ).getPath( root ).resolve( filename );
+        try {
+            rootDir.mkdirs();
+
+            IOUtils.writeFile( file, expected, UTF8 );
+
+            try (SeekableByteChannel byteChannel = filePath.getFileSystem().provider().newByteChannel( 
+                    filePath,
+                    EnumSet.of(
+                            StandardOpenOption.READ,
+                            StandardOpenOption.WRITE ),
+                    PosixFilePermissions.asFileAttribute( EnumSet.of(
+                            PosixFilePermission.OWNER_READ,
+                            PosixFilePermission.OWNER_WRITE,
+                            PosixFilePermission.OWNER_EXECUTE ) ) )) {
+
+                byte[] bytes = new byte[4];
+                ByteBuffer buffer = ByteBuffer.wrap( bytes );
+                byteChannel.position( 3 ).read( buffer );
+
+                String threeToSeven = expected.substring( 3, 7 );
+                assertEquals( threeToSeven, new String( bytes, UTF8 ) );
+                
+                buffer.position( 0 );
+                assertEquals( 4, byteChannel.position( 10 ).write( buffer ) );
+                
+                String newExpected = expected.substring( 0, 10 ) + threeToSeven + expected.substring( 14 );
+                bytes = new byte[expected.getBytes( UTF8 ).length];
+                buffer = ByteBuffer.wrap( bytes );
+                byteChannel.position( 0 ).read( buffer );
+                assertEquals( newExpected, new String( bytes, UTF8 ) );
+            }
+        }
+        catch ( IOException e ) {
+            logger.error( "failed for {}: {}", filePath, e );
+            logger.debug( "failed:", e );
+            fail( "failed for " + filePath + ": " + e.getMessage() );
         }
         finally {
             IOUtils.deleteFiles( file, rootDir );

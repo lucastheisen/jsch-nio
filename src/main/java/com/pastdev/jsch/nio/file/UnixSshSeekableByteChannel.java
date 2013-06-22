@@ -66,7 +66,7 @@ public class UnixSshSeekableByteChannel implements SeekableByteChannel {
 
         open = true;
 
-        // maybe wanna lock file a la flock
+        // maybe wanna lock file a la 'flock'
     }
 
     @Override

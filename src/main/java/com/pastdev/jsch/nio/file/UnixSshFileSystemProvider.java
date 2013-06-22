@@ -451,7 +451,7 @@ public class UnixSshFileSystemProvider extends AbstractSshFileSystemProvider {
         if ( options.contains( StandardOpenOption.DELETE_ON_CLOSE ) ) {
             throw new UnsupportedOperationException( "not gonna implement" );
         }
-        // ignore SYNC, DSYNC and SPARSE
+        // dd has options for SYNC, DSYNC and SPARSE maybe...
 
         try {
             checkAccess( unixPath );
@@ -462,6 +462,8 @@ public class UnixSshFileSystemProvider extends AbstractSshFileSystemProvider {
         catch ( NoSuchFileException e ) {
             if ( options.contains( StandardOpenOption.CREATE_NEW ) ) {
                 // this is as close to atomic create as i can get...
+                // TODO convert this to use `dd of=file conv=excl` and write 0
+                // bytes which will make the check for exists and create atomic
                 createFile( unixPath );
             }
             else if ( !options.contains( StandardOpenOption.CREATE ) ) {
@@ -693,7 +695,8 @@ public class UnixSshFileSystemProvider extends AbstractSshFileSystemProvider {
             temp.put( bytes );
             bytes.position( bytesPosition );
 
-            ChannelExecWrapper sshChannel = path.getFileSystem().getCommandRunner().open( "dd bs=1 seek=" + startIndex + " of=" + path.toString() );
+            String command = "dd conv=notrunc bs=1 seek=" + startIndex + " of=" + path.toString();
+            ChannelExecWrapper sshChannel = path.getFileSystem().getCommandRunner().open( command );
             int written = 0;
             try (OutputStream out = sshChannel.getOutputStream()) {
                 WritableByteChannel outChannel = Channels.newChannel( out );
