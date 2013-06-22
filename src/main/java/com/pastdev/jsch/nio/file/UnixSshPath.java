@@ -13,8 +13,10 @@ import java.nio.file.WatchEvent.Kind;
 import java.nio.file.WatchEvent.Modifier;
 import java.nio.file.WatchKey;
 import java.nio.file.WatchService;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
+import java.util.List;
 
 
 public class UnixSshPath extends AbstractSshPath {
@@ -56,21 +58,37 @@ public class UnixSshPath extends AbstractSshPath {
     }
 
     @Override
-    public boolean endsWith( Path arg0 ) {
-        // TODO Auto-generated method stub
-        return false;
+    public boolean endsWith( Path path ) {
+        if ( !getFileSystem().equals( path.getFileSystem() ) ) {
+            return false;
+        }
+        if ( path.isAbsolute() && !isAbsolute() ) {
+            return false;
+        }
+
+        int count = getNameCount();
+        int otherCount = path.getNameCount();
+        if ( otherCount > count ) {
+            return false;
+        }
+
+        for ( count--, otherCount--; otherCount >= 0; count--, otherCount-- ) {
+            if ( !path.getName( otherCount ).toString().equals( getName( count ).toString() ) ) {
+                return false;
+            }
+        }
+        return true;
     }
 
     @Override
-    public boolean endsWith( String arg0 ) {
-        // TODO Auto-generated method stub
-        return false;
+    public boolean endsWith( String path ) {
+        return endsWith( new UnixSshPath( getFileSystem(), path ) );
     }
 
     @Override
-    public Path getFileName() {
-        // TODO Auto-generated method stub
-        return null;
+    public UnixSshPath getFileName() {
+        if ( parts.length == 0 ) return null;
+        return new UnixSshPath( getFileSystem(), false, getFileNameString() );
     }
 
     String getFileNameString() {
@@ -88,7 +106,7 @@ public class UnixSshPath extends AbstractSshPath {
     }
 
     @Override
-    public Path getName( int index ) {
+    public UnixSshPath getName( int index ) {
         if ( index < 0 ) {
             throw new IllegalArgumentException();
         }
@@ -97,7 +115,7 @@ public class UnixSshPath extends AbstractSshPath {
         }
 
         return new UnixSshPath( (UnixSshFileSystem)getFileSystem(),
-                isAbsolute(), Arrays.copyOfRange( parts, 0, index + 1 ) );
+                false, parts[index] );
     }
 
     @Override
@@ -106,7 +124,7 @@ public class UnixSshPath extends AbstractSshPath {
     }
 
     @Override
-    public Path getParent() {
+    public UnixSshPath getParent() {
         if ( parts.length == 0 && !isAbsolute() ) {
             return null;
         }
@@ -146,18 +164,14 @@ public class UnixSshPath extends AbstractSshPath {
     public Iterator<Path> iterator() {
         return new Iterator<Path>() {
             int index = 0;
+            int count = getNameCount();
 
             public boolean hasNext() {
-                return index < parts.length;
+                return index < count;
             }
 
             public Path next() {
-                if ( index++ == 0 ) {
-                    return getFileSystem().getPath( parts[0] );
-                }
-                else {
-                    return getFileSystem().getPath( parts[0], Arrays.copyOfRange( parts, 1, index ) );
-                }
+                return getName( index++ );
             }
 
             public void remove() {
@@ -169,8 +183,23 @@ public class UnixSshPath extends AbstractSshPath {
 
     @Override
     public Path normalize() {
-        // TODO Auto-generated method stub
-        return null;
+        List<String> partsList = new ArrayList<String>();
+        for ( String part : parts ) {
+            if ( part.equals( "." ) ) {
+                continue;
+            }
+            else if ( part.equals( ".." ) ) {
+                int size = partsList.size();
+                if ( size > 0 ) {
+                    partsList.remove( size - 1 );
+                }
+            }
+            else {
+                partsList.add( part );
+            }
+        }
+        return new UnixSshPath( getFileSystem(), isAbsolute(),
+                partsList.toArray( new String[partsList.size()] ) );
     }
 
     @Override
@@ -186,53 +215,81 @@ public class UnixSshPath extends AbstractSshPath {
     }
 
     @Override
-    public Path relativize( Path arg0 ) {
+    public Path relativize( Path path ) {
         // TODO Auto-generated method stub
         return null;
     }
 
     @Override
     public Path resolve( Path other ) {
-        // TODO Auto-generated method stub
-        return null;
+        if ( other.isAbsolute() ) {
+            return other;
+        }
+        else if ( other.getNameCount() == 0 ) {
+            return this;
+        }
+
+        int count = other.getNameCount();
+        String[] combined = new String[parts.length + count];
+        System.arraycopy( parts, 0, combined, 0, parts.length );
+        int index = parts.length;
+        for ( Path otherPart : other ) {
+            combined[index++] = otherPart.toString();
+        }
+        return new UnixSshPath( getFileSystem(), isAbsolute(), combined );
     }
 
     @Override
     public Path resolve( String other ) {
-        String[] newPath = new String[parts.length + 1];
-        System.arraycopy( parts, 0, newPath, 0, parts.length );
-        newPath[parts.length] = other;
-        return new UnixSshPath( (UnixSshFileSystem)getFileSystem(), isAbsolute(), newPath );
+        return resolve( new UnixSshPath( getFileSystem(), other ) );
     }
 
     @Override
-    public Path resolveSibling( Path arg0 ) {
-        // TODO Auto-generated method stub
-        return null;
+    public Path resolveSibling( Path other ) {
+        return getParent().resolve( other );
     }
 
     @Override
-    public Path resolveSibling( String arg0 ) {
-        // TODO Auto-generated method stub
-        return null;
+    public Path resolveSibling( String other ) {
+        return resolveSibling( new UnixSshPath( getFileSystem(), other ) );
     }
 
     @Override
-    public boolean startsWith( Path arg0 ) {
-        // TODO Auto-generated method stub
-        return false;
+    public boolean startsWith( Path other ) {
+        if ( !getFileSystem().equals( other.getFileSystem() ) ) {
+            return false;
+        }
+        if ( (other.isAbsolute() && !isAbsolute()) ||
+                (isAbsolute() && !other.isAbsolute()) ) {
+            return false;
+        }
+
+        int count = getNameCount();
+        int otherCount = other.getNameCount();
+        if ( otherCount > count ) {
+            return false;
+        }
+        
+        for ( int i = 0; i < otherCount; i++ ) {
+            if ( !other.getName( i ).toString().equals( getName( i ).toString() ) ) {
+                return false;
+            }
+        }
+        return true;
     }
 
     @Override
-    public boolean startsWith( String arg0 ) {
-        // TODO Auto-generated method stub
-        return false;
+    public boolean startsWith( String other ) {
+        return startsWith( new UnixSshPath( getFileSystem(), other ) );
     }
 
     @Override
-    public Path subpath( int arg0, int arg1 ) {
-        // TODO Auto-generated method stub
-        return null;
+    public Path subpath( int start, int end ) {
+        String[] parts = new String[end-start];
+        for ( int i = start; i < end; i++ ) {
+            parts[i] = getName( i ).toString();
+        }
+        return new UnixSshPath( getFileSystem(), false, parts );
     }
 
     @Override
@@ -250,11 +307,11 @@ public class UnixSshPath extends AbstractSshPath {
     @Override
     public File toFile() {
         // TODO Auto-generated method stub
-        return null;
+        throw new UnsupportedOperationException( "this opens up a WHOLE new can of worms.  im just not ready for that" );
     }
 
     @Override
-    public Path toRealPath( LinkOption... arg0 ) throws IOException {
+    public Path toRealPath( LinkOption... linkOptions ) throws IOException {
         // TODO Auto-generated method stub
         return null;
     }

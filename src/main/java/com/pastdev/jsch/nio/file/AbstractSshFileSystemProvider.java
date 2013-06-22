@@ -6,7 +6,10 @@ import java.net.URI;
 import java.nio.file.DirectoryStream;
 import java.nio.file.Path;
 import java.nio.file.spi.FileSystemProvider;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Iterator;
+import java.util.List;
 
 
 abstract public class AbstractSshFileSystemProvider extends FileSystemProvider {
@@ -15,13 +18,17 @@ abstract public class AbstractSshFileSystemProvider extends FileSystemProvider {
         return getFileSystem( uri ).getPath( uri.getPath() );
     }
 
-    public static class ArrayEntryDirectoryStream implements DirectoryStream<Path> {
-        private String[] entries;
-        private Path parent;
+    public static class StandardDirectoryStream implements DirectoryStream<Path> {
+        private List<Path> accepted;
 
-        public ArrayEntryDirectoryStream( Path parent, String[] entries ) {
-            this.parent = parent;
-            this.entries = entries;
+        public StandardDirectoryStream( Path parent, String[] entries, Filter<? super Path> filter ) throws IOException {
+            accepted = new ArrayList<Path>();
+            for ( String entry : entries ) {
+                Path path = parent.resolve( entry );
+                if ( filter.accept( path ) ) {
+                    accepted.add( path );
+                }
+            }
         }
 
         public void close() throws IOException {
@@ -29,21 +36,7 @@ abstract public class AbstractSshFileSystemProvider extends FileSystemProvider {
         }
 
         public Iterator<Path> iterator() {
-            return new Iterator<Path>() {
-                private int currentIndex = 0;
-
-                public boolean hasNext() {
-                    return currentIndex < entries.length;
-                }
-
-                public Path next() {
-                    return parent.resolve( entries[currentIndex++] );
-                }
-
-                public void remove() {
-                    throw new UnsupportedOperationException();
-                }
-            };
+            return Collections.unmodifiableList( accepted ).iterator();
         }
     }
 }

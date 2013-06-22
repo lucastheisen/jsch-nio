@@ -75,7 +75,7 @@ public class UnixSshFileSystemProvider extends AbstractSshFileSystemProvider {
         this.fileSystemMap = new HashMap<URI, UnixSshFileSystem>();
     }
 
-    public UnixSshPath checkPath( Path path ) {
+    UnixSshPath checkPath( Path path ) {
         if ( path == null ) {
             throw new NullPointerException();
         }
@@ -288,8 +288,8 @@ public class UnixSshFileSystemProvider extends AbstractSshFileSystemProvider {
         UnixSshPath unixPath = checkPath( path );
         ExecuteResult result = execute( unixPath, "ls -1 " + unixPath.toString() );
         if ( result.getExitCode() == 0 ) {
-            return new ArrayEntryDirectoryStream(
-                    path, result.getStdout().split( "\n" ) );
+            return new StandardDirectoryStream(
+                    path, result.getStdout().split( "\n" ), filter );
         }
         else {
             throw new IOException( "failed to list directory (" + result.getExitCode() + "): " +
@@ -434,7 +434,7 @@ public class UnixSshFileSystemProvider extends AbstractSshFileSystemProvider {
 
     void setTimes( UnixSshPath path, FileTime lastModifiedTime, FileTime lastAccessTime ) throws IOException {
         if ( lastModifiedTime != null && lastModifiedTime.equals( lastAccessTime ) ) {
-            String command = "touch -d " + toTouchTime(lastModifiedTime) + " " + path.toString();
+            String command = "touch -d " + toTouchTime( lastModifiedTime ) + " " + path.toString();
             ExecuteResult result = execute( path, command );
             if ( result.getExitCode() != 0 ) {
                 throw new IOException( "failed to run " + command + " ("
@@ -544,12 +544,6 @@ public class UnixSshFileSystemProvider extends AbstractSshFileSystemProvider {
         }
     }
 
-    private static class GroupPrincipalImpl extends UserPrincipalImpl implements GroupPrincipal {
-        GroupPrincipalImpl( String name ) {
-            super( name );
-        }
-    }
-
     private class PosixFileAttributesImpl extends BasicFileAttributesImpl implements PosixFileAttributes {
         public PosixFileAttributesImpl( Path path, LinkOption... linkOptions ) throws IOException {
             super( path, POSIX_ADDITIONAL_SUPPORTED_ATTRIBUTES, linkOptions );
@@ -625,10 +619,10 @@ public class UnixSshFileSystemProvider extends AbstractSshFileSystemProvider {
                 return "other".equals( value.toLowerCase() );
             }
             if ( this == owner ) {
-                return new UserPrincipalImpl( value );
+                return new StandardUserPrincipal( value );
             }
             if ( this == group ) {
-                return new GroupPrincipalImpl( value );
+                return new StandardGroupPrincipal( value );
             }
             if ( this == permissions ) {
                 // need to remove leading 'd' and replace possible 's'
@@ -648,29 +642,6 @@ public class UnixSshFileSystemProvider extends AbstractSshFileSystemProvider {
             }
 
             return value;
-        }
-    }
-
-    private static class UserPrincipalImpl implements UserPrincipal {
-        private String name;
-
-        UserPrincipalImpl( String name ) {
-            this.name = name;
-        }
-
-        @Override
-        public boolean equals( Object o ) {
-            return name.equals( o );
-        }
-
-        @Override
-        public String getName() {
-            return name;
-        }
-
-        @Override
-        public int hashCode() {
-            return name.hashCode();
         }
     }
 }
