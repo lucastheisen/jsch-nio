@@ -3,23 +3,28 @@
   <modelVersion>4.0.0</modelVersion>
 
   <groupId>com.pastdev</groupId>
-  <artifactId>jsch-watch-service</artifactId>
+  <artifactId>jsch-nio</artifactId>
   <version>0.0.1-SNAPSHOT</version>
   <packaging>jar</packaging>
 
-  <name>JSch WatchService Implementation</name>
+  <name>JSch NIO FileSystem Implementation</name>
   <url>http://pastdev.com</url>
+
+  <organization>
+    <name>pastdev.com</name>
+    <url>http://pastdev.com</url>
+  </organization>
+
+  <scm>
+    <connection>scm:git:git://github.com/lucastheisen/jsch-nio.git</connection>
+    <developerConnection>scm:git:git@github.com:lucastheisen/jsch-nio.git</developerConnection>
+    <url>http://github.com/lucastheisen/jsch-nio</url>
+  </scm>
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
   </properties>
   
-  <scm>
-    <connection>scm:git:git://github.com/lucastheisen/jsch-watch-service.git</connection>
-    <developerConnection>scm:git:git@github.com:lucastheisen/jsch-watch-service.git</developerConnection>
-    <url>http://github.com/lucastheisen/jsch-watch-service</url>
-  </scm>
-
   <dependencies>
     <dependency>
       <groupId>com.jcraft</groupId>
