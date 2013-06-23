@@ -1,5 +1,7 @@
-jsch-nio
+jsch-nio 
 ========
+_Note that this project depends on the [jsch-extension](https://github.com/lucastheisen/jsch-extension) project_
+
 jsch-nio is an attempt to leverage JSch ssh implementation to implement an nio FileSystem and all that goes along with it.  So far there is a fully functional unix/linux FileSystemProvider that allows you to work with Path objects pointing to remote files and directories.  It leverages standard unix tools including cat, dd, touch, mkdir, rmdir, and more.
 
 Here is a quick and dirty example:
