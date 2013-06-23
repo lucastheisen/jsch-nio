@@ -1,23 +1,20 @@
-package com.pastdev.jsch.watchservice;
+package com.pastdev.jsch.nio.file;
 
 
 import java.nio.file.WatchEvent;
 
 
-import com.pastdev.jsch.scp.ScpFile;
-
-
-public class ScpFileWatchEvent<T> implements WatchEvent<T> {
-    public static final WatchEvent.Kind<ScpFile> ENTRY_CREATE =
-            new ScpFileWatchEventKind<ScpFile>( "ENTRY_CREATE", ScpFile.class );
+public class UnixSshPathWatchEvent<T> implements WatchEvent<T> {
+    public static final WatchEvent.Kind<UnixSshPath> ENTRY_CREATE =
+            new UnixSshWatchEventKind<UnixSshPath>( "ENTRY_CREATE", UnixSshPath.class );
     public static final WatchEvent.Kind<Object> OVERFLOW =
-            new ScpFileWatchEventKind<Object>( "OVERFLOW", Object.class );
+            new UnixSshWatchEventKind<Object>( "OVERFLOW", Object.class );
 
     private final WatchEvent.Kind<T> kind;
     private final T context;
     private int count;
-    
-    public ScpFileWatchEvent( WatchEvent.Kind<T> kind, T context ) {
+
+    UnixSshPathWatchEvent( WatchEvent.Kind<T> kind, T context ) {
         this.kind = kind;
         this.context = context;
         this.count = 1;
@@ -37,16 +34,16 @@ public class ScpFileWatchEvent<T> implements WatchEvent<T> {
     public T context() {
         return context;
     }
-    
+
     void increment() {
         count++;
     }
 
-    private static class ScpFileWatchEventKind<T> implements WatchEvent.Kind<T> {
+    private static class UnixSshWatchEventKind<T> implements WatchEvent.Kind<T> {
         private String name;
         private Class<T> clazz;
 
-        public ScpFileWatchEventKind( String name, Class<T> clazz ) {
+        public UnixSshWatchEventKind( String name, Class<T> clazz ) {
             this.name = name;
             this.clazz = clazz;
         }

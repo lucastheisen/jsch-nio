@@ -28,22 +28,21 @@ import com.jcraft.jsch.JSchException;
 
 
 public class UnixSshFileSystem extends AbstractSshFileSystem {
-    private String defaultDirectory;
+    private UnixSshPath defaultDirectory;
     private UnixSshPath rootDirectory;
 
     public UnixSshFileSystem( UnixSshFileSystemProvider provider, URI uri, Map<String, ?> environment ) throws IOException {
         super( provider, uri, environment );
 
-        this.defaultDirectory = uri.getPath();
-
-        if ( defaultDirectory.charAt( 0 ) != PATH_SEPARATOR ) {
+        this.defaultDirectory = new UnixSshPath( this, uri.getPath() );
+        if ( ! defaultDirectory.isAbsolute() ) {
             throw new RuntimeException( "default directory must be absolute" );
         }
 
         rootDirectory = new UnixSshPath( this, PATH_SEPARATOR_STRING );
     }
 
-    String getDefaultDirectory() {
+    UnixSshPath getDefaultDirectory() {
         return defaultDirectory;
     }
 
@@ -258,7 +257,7 @@ public class UnixSshFileSystem extends AbstractSshFileSystem {
     @Override
     public WatchService newWatchService() throws IOException {
         // TODO make sure these values are set in environment, or get good defaults
-        return new UnixSshWatchService( (long)getFromEnvironment( "pollInterval" ), 
+        return new UnixSshFileSystemWatchService( (Long)getFromEnvironment( "pollInterval" ), 
                 (TimeUnit)getFromEnvironment( "pollIntervalTimeUnit" ) );
     }
 

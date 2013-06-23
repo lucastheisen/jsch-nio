@@ -19,8 +19,10 @@ import org.slf4j.LoggerFactory;
 
 // use this command: find . -maxdepth 1 -type f -exec stat -c '%Y %n' {} +
 
-public class UnixSshWatchService implements WatchService {
-    private static Logger logger = LoggerFactory.getLogger( UnixSshWatchService.class );
+public class UnixSshFileSystemWatchService implements WatchService {
+    private static Logger logger = LoggerFactory.getLogger( UnixSshFileSystemWatchService.class );
+    private static final long DEFAULT_CHECK_INTERVAL = 10;
+    private static final TimeUnit DEFAULT_CHECK_INTERVAL_TIME_UNIT = TimeUnit.MINUTES;
 
     private long checkInterval;
     private TimeUnit checkIntervalTimeUnit;
@@ -28,12 +30,13 @@ public class UnixSshWatchService implements WatchService {
     private final LinkedBlockingDeque<WatchKey> pendingKeys;
     private ExecutorService executorService;
 
-    public UnixSshWatchService( long checkInterval, TimeUnit checkIntervalTimeUnit ) {
-        this.checkInterval = checkInterval;
-        this.checkIntervalTimeUnit = checkIntervalTimeUnit;
+    public UnixSshFileSystemWatchService( Long checkInterval, TimeUnit checkIntervalTimeUnit ) {
+        logger.debug( "creating new watch service polling every {} {}", checkInterval, checkIntervalTimeUnit );
+        this.checkInterval = checkInterval == null ? DEFAULT_CHECK_INTERVAL : checkInterval;
+        this.checkIntervalTimeUnit = checkIntervalTimeUnit == null 
+                ? DEFAULT_CHECK_INTERVAL_TIME_UNIT : checkIntervalTimeUnit;
         this.pendingKeys = new LinkedBlockingDeque<WatchKey>();
-        executorService = Executors.newFixedThreadPool( 1 );
-        // executorService.execute( new SshDirectoryWatcher() );
+        executorService = Executors.newCachedThreadPool();
     }
 
     @Override
@@ -42,7 +45,11 @@ public class UnixSshWatchService implements WatchService {
         closed = true;
     }
 
-    private void ensureOpen() {
+    boolean closed() {
+        return closed;
+    }
+
+    void ensureOpen() {
         if ( closed ) throw new ClosedWatchServiceException();
     }
 
@@ -63,6 +70,10 @@ public class UnixSshWatchService implements WatchService {
     WatchKey register( UnixSshPath path, Kind<?>[] events, Modifier... modifiers ) {
         // TODO implement register
         return null;
+    }
+    
+    void unregister( WatchKey watchKey ) {
+        
     }
 
     @Override

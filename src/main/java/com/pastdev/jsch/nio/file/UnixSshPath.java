@@ -93,6 +93,18 @@ public class UnixSshPath extends AbstractSshPath {
     }
 
     @Override
+    public boolean equals( Object other ) {
+        if ( !(other instanceof UnixSshPath) ) {
+            return false;
+        }
+        UnixSshPath otherPath = (UnixSshPath)other;
+        if ( !otherPath.getFileSystem().equals( getFileSystem() ) ) {
+            return false;
+        }
+        return toString().equals( otherPath.toString() );
+    }
+
+    @Override
     public UnixSshPath getFileName() {
         if ( parts.length == 0 ) return null;
         return new UnixSshPath( getFileSystem(), false, getFileNameString() );
@@ -108,11 +120,6 @@ public class UnixSshPath extends AbstractSshPath {
     }
 
     @Override
-    public String getHostname() {
-        return ((UnixSshFileSystem)getFileSystem()).getUri().getHost();
-    }
-
-    @Override
     public UnixSshPath getName( int index ) {
         if ( index < 0 ) {
             throw new IllegalArgumentException();
@@ -121,7 +128,7 @@ public class UnixSshPath extends AbstractSshPath {
             throw new IllegalArgumentException();
         }
 
-        return new UnixSshPath( (UnixSshFileSystem)getFileSystem(),
+        return new UnixSshPath( getFileSystem(),
                 false, parts[index] );
     }
 
@@ -136,21 +143,16 @@ public class UnixSshPath extends AbstractSshPath {
             return null;
         }
         if ( parts.length <= 1 ) {
-            return new UnixSshPath( (UnixSshFileSystem)getFileSystem(), isAbsolute() );
+            return new UnixSshPath( getFileSystem(), isAbsolute() );
         }
-        return new UnixSshPath( (UnixSshFileSystem)getFileSystem(), isAbsolute(),
+        return new UnixSshPath( getFileSystem(), isAbsolute(),
                 Arrays.copyOfRange( parts, 0, parts.length - 1 ) );
-    }
-
-    @Override
-    public int getPort() {
-        return ((UnixSshFileSystem)getFileSystem()).getUri().getPort();
     }
 
     @Override
     public Path getRoot() {
         if ( isAbsolute() ) {
-            return new UnixSshPath( (UnixSshFileSystem)getFileSystem(), true );
+            return new UnixSshPath( getFileSystem(), true );
         }
         else {
             return null;
@@ -158,34 +160,13 @@ public class UnixSshPath extends AbstractSshPath {
     }
 
     @Override
-    public String getUsername() {
-        return ((UnixSshFileSystem)getFileSystem()).getUri().getUserInfo();
+    public int hashCode() {
+        return toString().hashCode();
     }
 
     @Override
     public boolean isAbsolute() {
         return absolute;
-    }
-
-    @Override
-    public Iterator<Path> iterator() {
-        return new Iterator<Path>() {
-            int index = 0;
-            int count = getNameCount();
-
-            public boolean hasNext() {
-                return index < count;
-            }
-
-            public Path next() {
-                return getName( index++ );
-            }
-
-            public void remove() {
-                // path is immutable... dont want to allow changes
-                throw new UnsupportedOperationException();
-            }
-        };
     }
 
     @Override
@@ -219,17 +200,73 @@ public class UnixSshPath extends AbstractSshPath {
         if ( watcher == null ) {
             throw new NullPointerException();
         }
-        if ( !(watcher instanceof UnixSshWatchService) ) {
+        if ( !(watcher instanceof UnixSshFileSystemWatchService) ) {
             throw new ProviderMismatchException();
         }
         getFileSystem().provider().checkAccess( this, AccessMode.READ );
-        return ((UnixSshWatchService)watcher).register( this, events, modifiers );
+        return ((UnixSshFileSystemWatchService)watcher).register( this, events, modifiers );
     }
 
     @Override
-    public UnixSshPath relativize( Path path ) {
-        // TODO Auto-generated method stub
-        return null;
+    public UnixSshPath relativize( Path other ) {
+        if ( other == null ) {
+            throw new NullPointerException();
+        }
+        if ( !(other instanceof UnixSshPath) ) {
+            throw new ProviderMismatchException();
+        }
+
+        UnixSshPath unixOther = (UnixSshPath)other;
+        if ( isAbsolute() && !unixOther.isAbsolute() ) {
+            throw new IllegalArgumentException( "this and other must have same isAbsolute" );
+        }
+
+        if ( getNameCount() == 0 ) {
+            return unixOther;
+        }
+
+        Path relative = null;
+        Path remainingOther = null;
+        Iterator<Path> otherIterator = unixOther.iterator();
+        for ( Path part : this ) {
+            if ( relative != null ) {
+                relative = relative.resolve( ".." );
+                continue;
+            }
+
+            if ( otherIterator.hasNext() ) {
+                Path otherPart = otherIterator.next();
+                if ( !part.equals( otherPart ) ) {
+                    remainingOther = otherPart;
+                    while ( otherIterator.hasNext() ) {
+                        remainingOther = remainingOther.resolve(
+                                otherIterator.next() );
+                    }
+                    relative = new UnixSshPath( getFileSystem(), ".." );
+                }
+            }
+            else {
+                relative = new UnixSshPath( getFileSystem(), ".." );
+            }
+        }
+
+        if ( relative == null ) {
+            while ( otherIterator.hasNext() ) {
+                if ( remainingOther == null ) {
+                    remainingOther = new UnixSshPath( getFileSystem(), "" );
+                }
+                else {
+                    remainingOther = remainingOther.resolve(
+                            otherIterator.next() );
+                }
+            }
+            return remainingOther == null
+                    ? new UnixSshPath( getFileSystem(), "" )
+                    : (UnixSshPath)remainingOther;
+        }
+        return remainingOther == null
+                ? (UnixSshPath)relative
+                : (UnixSshPath)relative.resolve( remainingOther );
     }
 
     @Override
@@ -315,9 +352,7 @@ public class UnixSshPath extends AbstractSshPath {
             return this;
         }
         else {
-            UnixSshFileSystem fileSystem = (UnixSshFileSystem)getFileSystem();
-            return fileSystem.getPath(
-                    fileSystem.getDefaultDirectory() + PATH_SEPARATOR + toString() );
+            return getFileSystem().getDefaultDirectory().resolve( this );
         }
     }
 
@@ -342,6 +377,6 @@ public class UnixSshPath extends AbstractSshPath {
 
     @Override
     public URI toUri() {
-        return ((UnixSshFileSystem)getFileSystem()).getUri().resolve( toAbsolutePath().toString() );
+        return getFileSystem().getUri().resolve( toAbsolutePath().toString() );
     }
 }

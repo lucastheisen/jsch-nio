@@ -2,8 +2,8 @@ package com.pastdev.jsch.nio.file;
 
 
 import java.io.File;
-import java.nio.file.FileSystem;
 import java.nio.file.Path;
+import java.util.Iterator;
 
 
 abstract public class AbstractSshPath implements Path {
@@ -13,20 +13,48 @@ abstract public class AbstractSshPath implements Path {
         this.fileSystem = fileSystem;
     }
 
-    public FileSystem getFileSystem() {
+    @Override
+    public AbstractSshFileSystem getFileSystem() {
         return fileSystem;
     }
 
-    abstract public String getHostname();
+    public String getHostname() {
+        return getFileSystem().getUri().getHost();
+    }
 
     @Override
     public Path getFileName() {
         return getName( getNameCount() - 1 );
     }
 
-    abstract public int getPort();
+    public int getPort() {
+        return getFileSystem().getUri().getPort();
+    }
 
-    abstract public String getUsername();
+    public String getUsername() {
+        return getFileSystem().getUri().getUserInfo();
+    }
+
+    @Override
+    public Iterator<Path> iterator() {
+        return new Iterator<Path>() {
+            int index = 0;
+            int count = getNameCount();
+
+            public boolean hasNext() {
+                return index < count;
+            }
+
+            public Path next() {
+                return getName( index++ );
+            }
+
+            public void remove() {
+                // path is immutable... dont want to allow changes
+                throw new UnsupportedOperationException();
+            }
+        };
+    }
 
     @Override
     public File toFile() {

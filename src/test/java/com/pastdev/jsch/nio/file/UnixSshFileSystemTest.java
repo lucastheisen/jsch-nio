@@ -20,6 +20,7 @@ import java.nio.channels.SeekableByteChannel;
 import java.nio.charset.Charset;
 import java.nio.file.DirectoryStream;
 import java.nio.file.DirectoryStream.Filter;
+import java.nio.file.FileSystem;
 import java.nio.file.FileSystems;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -122,17 +123,6 @@ public class UnixSshFileSystemTest {
         catch ( IOException e ) {
             Assume.assumeNoException( e );
         }
-    }
-
-    @Test
-    public void testUri() {
-        String filename = "silly.txt";
-        Path tempPath = Paths.get( uri );
-        UnixSshPath path = (UnixSshPath)tempPath.resolve( filename );
-        assertEquals( username, path.getUsername() );
-        assertEquals( hostname, path.getHostname() );
-        assertEquals( port, path.getPort() );
-        assertEquals( scpPath + PATH_SEPARATOR + filename, path.toString() );
     }
 
     @Test
@@ -349,6 +339,22 @@ public class UnixSshFileSystemTest {
             IOUtils.deleteFiles( file, rootDir );
         }
     }
+    
+    @Test
+    public void testRelativize() {
+        FileSystem fileSystem = FileSystems.getFileSystem( uri );
+        Path path = fileSystem.getPath( "this/is/a/test" );
+        Path other = fileSystem.getPath( "this/is/a/test/of/the/emergency/broadcast/system" );
+        Path crazy = fileSystem.getPath( "this/is/b/test/of/the" );
+        Path expectedRelative = fileSystem.getPath( "of/the/emergency/broadcast/system" );
+        Path expectedInverseRelative = fileSystem.getPath( "../../../../.." );
+        Path expectedCrazyRelative = fileSystem.getPath( "../../b/test/of/the" );
+        Path expectedOtherCrazyRelative = fileSystem.getPath( "../../../../../../../b/test/of/the" );
+        assertEquals( expectedRelative, path.relativize( other ) );
+        assertEquals( expectedInverseRelative, other.relativize( path ) );
+        assertEquals( expectedCrazyRelative, path.relativize( crazy ) );
+        assertEquals( expectedOtherCrazyRelative, other.relativize( crazy ) );
+    }
 
     @Test
     public void testSeekableByteChannel() {
@@ -398,5 +404,16 @@ public class UnixSshFileSystemTest {
         finally {
             IOUtils.deleteFiles( file, rootDir );
         }
+    }
+
+    @Test
+    public void testUri() {
+        String filename = "silly.txt";
+        Path tempPath = Paths.get( uri );
+        UnixSshPath path = (UnixSshPath)tempPath.resolve( filename );
+        assertEquals( username, path.getUsername() );
+        assertEquals( hostname, path.getHostname() );
+        assertEquals( port, path.getPort() );
+        assertEquals( scpPath + PATH_SEPARATOR + filename, path.toString() );
     }
 }
