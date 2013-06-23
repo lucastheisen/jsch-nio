@@ -6,8 +6,11 @@ import static com.pastdev.jsch.nio.file.UnixSshFileSystemProvider.PATH_SEPARATOR
 
 import java.io.IOException;
 import java.net.URI;
+import java.nio.file.AccessMode;
 import java.nio.file.LinkOption;
 import java.nio.file.Path;
+import java.nio.file.ProviderMismatchException;
+import java.nio.file.WatchEvent;
 import java.nio.file.WatchEvent.Kind;
 import java.nio.file.WatchEvent.Modifier;
 import java.nio.file.WatchKey;
@@ -207,15 +210,20 @@ public class UnixSshPath extends AbstractSshPath {
     }
 
     @Override
-    public WatchKey register( WatchService arg0, Kind<?>... arg1 ) throws IOException {
-        // TODO Auto-generated method stub
-        return null;
+    public WatchKey register( WatchService watcher, Kind<?>... events ) throws IOException {
+        return register( watcher, events, new WatchEvent.Modifier[0] );
     }
 
     @Override
-    public WatchKey register( WatchService arg0, Kind<?>[] arg1, Modifier... arg2 ) throws IOException {
-        // TODO Auto-generated method stub
-        return null;
+    public WatchKey register( WatchService watcher, Kind<?>[] events, Modifier... modifiers ) throws IOException {
+        if ( watcher == null ) {
+            throw new NullPointerException();
+        }
+        if ( !(watcher instanceof UnixSshWatchService) ) {
+            throw new ProviderMismatchException();
+        }
+        getFileSystem().provider().checkAccess( this, AccessMode.READ );
+        return ((UnixSshWatchService)watcher).register( this, events, modifiers );
     }
 
     @Override

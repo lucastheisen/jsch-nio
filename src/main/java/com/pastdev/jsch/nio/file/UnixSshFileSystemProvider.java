@@ -53,9 +53,6 @@ import org.slf4j.LoggerFactory;
 
 
 import com.jcraft.jsch.JSchException;
-import com.jcraft.jsch.Proxy;
-import com.pastdev.jsch.SessionFactory;
-import com.pastdev.jsch.SessionFactory.SessionFactoryBuilder;
 import com.pastdev.jsch.command.CommandRunner;
 import com.pastdev.jsch.command.CommandRunner.ChannelExecWrapper;
 import com.pastdev.jsch.command.CommandRunner.ExecuteResult;
@@ -365,39 +362,10 @@ public class UnixSshFileSystemProvider extends AbstractSshFileSystemProvider {
         if ( existing != null ) {
             throw new RuntimeException( "filesystem already exists for " + uri.toString() + " at " + existing.toString() );
         }
-        try {
-            // Construct a new sessionFactory from the URI authority, path, and
-            // optional environment proxy
-            SessionFactory defaultSessionFactory = (SessionFactory)environment.get( "defaultSessionFactory" );
-            if ( defaultSessionFactory == null ) {
-                throw new IllegalArgumentException( "defaultSessionFactory environment parameter is required" );
-            }
-            SessionFactoryBuilder builder = defaultSessionFactory.newSessionFactoryBuilder();
-            String username = uri.getUserInfo();
-            if ( username != null ) {
-                builder.setUsername( username );
-            }
-            String hostname = uri.getHost();
-            if ( hostname != null ) {
-                builder.setHostname( hostname );
-            }
-            int port = uri.getPort();
-            if ( port != -1 ) {
-                builder.setPort( port );
-            }
-            Proxy proxy = (Proxy)environment.get( "proxy" );
-            if ( proxy != null ) {
-                builder.setProxy( proxy );
-            }
 
-            UnixSshFileSystem fileSystem = new UnixSshFileSystem(
-                    this, uri, new CommandRunner( builder.build() ) );
-            fileSystemMap.put( baseUri, fileSystem );
-            return fileSystem;
-        }
-        catch ( JSchException e ) {
-            throw new IOException( e );
-        }
+        UnixSshFileSystem fileSystem = new UnixSshFileSystem( this, uri, environment );
+        fileSystemMap.put( baseUri, fileSystem );
+        return fileSystem;
     }
 
     @Override

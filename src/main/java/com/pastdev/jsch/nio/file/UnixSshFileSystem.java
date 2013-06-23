@@ -18,20 +18,22 @@ import java.nio.file.attribute.UserPrincipalNotFoundException;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 
 
 import com.jcraft.jsch.JSchException;
-import com.pastdev.jsch.command.CommandRunner;
 
 
 public class UnixSshFileSystem extends AbstractSshFileSystem {
     private String defaultDirectory;
     private UnixSshPath rootDirectory;
 
-    public UnixSshFileSystem( UnixSshFileSystemProvider provider, URI uri, CommandRunner commandRunner ) {
-        super( provider, uri, commandRunner );
+    public UnixSshFileSystem( UnixSshFileSystemProvider provider, URI uri, Map<String, ?> environment ) throws IOException {
+        super( provider, uri, environment );
+
         this.defaultDirectory = uri.getPath();
 
         if ( defaultDirectory.charAt( 0 ) != PATH_SEPARATOR ) {
@@ -255,8 +257,9 @@ public class UnixSshFileSystem extends AbstractSshFileSystem {
 
     @Override
     public WatchService newWatchService() throws IOException {
-        // TODO Auto-generated method stub
-        return null;
+        // TODO make sure these values are set in environment, or get good defaults
+        return new UnixSshWatchService( (long)getFromEnvironment( "pollInterval" ), 
+                (TimeUnit)getFromEnvironment( "pollIntervalTimeUnit" ) );
     }
 
     @Override
