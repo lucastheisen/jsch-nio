@@ -1,27 +1,40 @@
 package com.pastdev.jsch.nio.file;
 
 
+import java.io.IOException;
 import java.nio.file.WatchEvent;
 import java.nio.file.WatchKey;
-import java.nio.file.Watchable;
 import java.util.Collections;
 import java.util.List;
 
 
-public class UnixSshPathWatchKey implements WatchKey {
+import com.jcraft.jsch.JSchException;
+import com.pastdev.jsch.command.CommandRunner;
+import com.pastdev.jsch.command.CommandRunner.ExecuteResult;
+
+
+public class UnixSshPathWatchKey implements WatchKey, Runnable {
     private boolean cancelled;
+    private UnixSshPath dir;
     private List<WatchEvent<?>> events;
-    private Watchable watchable;
+    private long pollingTimeout;
     private UnixSshFileSystemWatchService watchService;
 
-    public UnixSshPathWatchKey( UnixSshFileSystemWatchService watchService, Watchable watchable ) {
+    public UnixSshPathWatchKey( UnixSshFileSystemWatchService watchService, UnixSshPath dir, long pollingTimeout ) {
         this.watchService = watchService;
-        this.watchable = watchable;
+        this.dir = dir;
+        this.pollingTimeout = pollingTimeout;
         this.cancelled = false;
     }
-    
-    void addCreateEvent( UnixSshPath path ) {
+
+    synchronized void addCreateEvent( UnixSshPath path ) {
         events.add( new UnixSshPathWatchEvent<UnixSshPath>( UnixSshPathWatchEvent.ENTRY_CREATE, path ) );
+    }
+
+    @Override
+    public void cancel() {
+        watchService.unregister( this );
+        cancelled = true;
     }
 
     @Override
@@ -46,13 +59,27 @@ public class UnixSshPathWatchKey implements WatchKey {
     }
 
     @Override
-    public void cancel() {
-        watchService.unregister( this );
-        cancelled = true;
+    public void run() {
+        try {
+            CommandRunner commandRunner = dir.getFileSystem().getCommandRunner();
+            String command = "find " + dir.toAbsolutePath().toString() + " -maxdepth 1 -type f -exec stat -c '%Y %n' {} +";
+            while ( true ) {
+                try {
+                    ExecuteResult result = commandRunner.execute( command );
+                    String[] files = result.getStdout().split( "\n" );
+                }
+                catch ( JSchException | IOException e ) {
+                }
+                Thread.sleep( pollingTimeout );
+            }
+        }
+        catch ( InterruptedException e ) {
+            // time to close out
+        }
     }
 
     @Override
-    public Watchable watchable() {
-        return watchable;
+    public UnixSshPath watchable() {
+        return dir;
     }
 }

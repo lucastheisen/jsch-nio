@@ -1,6 +1,9 @@
 package com.pastdev.jsch.nio.file;
 
 
+import static com.pastdev.jsch.nio.file.UnixSshFileSystemProvider.PATH_SEPARATOR;
+
+
 import java.io.IOException;
 import java.net.URI;
 import java.nio.file.FileSystem;
@@ -33,6 +36,7 @@ public abstract class AbstractSshFileSystem extends FileSystem {
     public AbstractSshFileSystem( AbstractSshFileSystemProvider provider, URI uri, Map<String, ?> environment ) throws IOException {
         this.provider = provider;
         this.uri = uri;
+        this.environment = environment;
         try {
             // Construct a new sessionFactory from the URI authority, path, and
             // optional environment proxy
@@ -69,10 +73,22 @@ public abstract class AbstractSshFileSystem extends FileSystem {
         commandRunner.close();
     }
 
+    String getCommand( String command ) {
+        if ( environment.containsKey( command ) ) {
+            return (String)environment.get( command );
+        }
+        else if ( environment.containsKey( "bin" ) ) {
+            return (String)environment.get( "bin" ) + PATH_SEPARATOR + command;
+        }
+        else {
+            return command;
+        }
+    }
+
     public CommandRunner getCommandRunner() {
         return commandRunner;
     }
-    
+
     public Object getFromEnvironment( String key ) {
         return environment.get( key );
     }

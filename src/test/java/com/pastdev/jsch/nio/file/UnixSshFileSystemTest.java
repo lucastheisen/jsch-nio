@@ -108,6 +108,7 @@ public class UnixSshFileSystemTest {
             defaultSessionFactory.setIdentityFromPrivateKey( privateKey );
             Map<String, Object> environment = new HashMap<String, Object>();
             environment.put( "defaultSessionFactory", defaultSessionFactory );
+            environment.put( "find", "/bin/find" );
 
             uri = new URI( "ssh.unix://" + username + "@" + hostname + ":" + port + scpPath );
             FileSystems.newFileSystem( uri, environment );
@@ -339,7 +340,7 @@ public class UnixSshFileSystemTest {
             IOUtils.deleteFiles( file, rootDir );
         }
     }
-    
+
     @Test
     public void testRelativize() {
         FileSystem fileSystem = FileSystems.getFileSystem( uri );
@@ -369,7 +370,7 @@ public class UnixSshFileSystemTest {
 
             IOUtils.writeFile( file, expected, UTF8 );
 
-            try (SeekableByteChannel byteChannel = filePath.getFileSystem().provider().newByteChannel( 
+            try (SeekableByteChannel byteChannel = filePath.getFileSystem().provider().newByteChannel(
                     filePath,
                     EnumSet.of(
                             StandardOpenOption.READ,
@@ -385,10 +386,10 @@ public class UnixSshFileSystemTest {
 
                 String threeToSeven = expected.substring( 3, 7 );
                 assertEquals( threeToSeven, new String( bytes, UTF8 ) );
-                
+
                 buffer.position( 0 );
                 assertEquals( 4, byteChannel.position( 10 ).write( buffer ) );
-                
+
                 String newExpected = expected.substring( 0, 10 ) + threeToSeven + expected.substring( 14 );
                 bytes = new byte[expected.getBytes( UTF8 ).length];
                 buffer = ByteBuffer.wrap( bytes );
@@ -403,6 +404,48 @@ public class UnixSshFileSystemTest {
         }
         finally {
             IOUtils.deleteFiles( file, rootDir );
+        }
+    }
+
+    @Test
+    public void testStatDirectory() {
+        final String root = UUID.randomUUID().toString();
+        final String filename1 = "silly1.txt";
+        final String filename2 = "silly2.txt";
+        final String filename3 = "silly3.txt";
+        final String filename4 = "silly4.txt";
+
+        File rootDir = new File( filesystemPath, root );
+        File file1 = new File( rootDir, filename1 );
+        File file2 = new File( rootDir, filename2 );
+        File file3 = new File( rootDir, filename3 );
+        File file4 = new File( rootDir, filename4 );
+        try {
+            rootDir.mkdirs();
+            IOUtils.writeFile( file1, expected, UTF8 );
+            IOUtils.writeFile( file2, expected, UTF8 );
+            IOUtils.writeFile( file3, expected, UTF8 );
+            IOUtils.writeFile( file4, expected, UTF8 );
+        }
+        catch ( IOException e ) {
+            logger.error( "could not write files to {}: {}", rootDir, e );
+            logger.debug( "could not write to file:", e );
+            fail( "could not write files to " + rootDir + ": " + e.getMessage() );
+        }
+
+        UnixSshPath rootPath = (UnixSshPath)FileSystems.getFileSystem( uri ).getPath( root );
+        try {
+            Map<UnixSshPath, PosixFileAttributes> map = rootPath.getFileSystem().provider().statDirectory( rootPath );
+            assertEquals( 4, map.size() );
+            assertTrue( map.containsKey( FileSystems.getFileSystem( uri ).getPath( filename1 ) ) );
+            assertTrue( map.containsKey( FileSystems.getFileSystem( uri ).getPath( filename2 ) ) );
+            assertTrue( map.containsKey( FileSystems.getFileSystem( uri ).getPath( filename3 ) ) );
+            assertTrue( map.containsKey( FileSystems.getFileSystem( uri ).getPath( filename4 ) ) );
+        }
+        catch ( IOException e ) {
+            logger.error( "could not stat directory {}: {}", rootDir, e );
+            logger.debug( "could not stat directory:", e );
+            fail( "could not stat directory " + rootDir + ": " + e.getMessage() );
         }
     }
 

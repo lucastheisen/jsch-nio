@@ -17,8 +17,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 
-// use this command: find . -maxdepth 1 -type f -exec stat -c '%Y %n' {} +
-
 public class UnixSshFileSystemWatchService implements WatchService {
     private static Logger logger = LoggerFactory.getLogger( UnixSshFileSystemWatchService.class );
     private static final long DEFAULT_CHECK_INTERVAL = 10;

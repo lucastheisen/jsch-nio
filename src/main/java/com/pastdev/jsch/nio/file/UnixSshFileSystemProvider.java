@@ -521,24 +521,11 @@ public class UnixSshFileSystemProvider extends AbstractSshFileSystemProvider {
 
     private Map<String, Object> readAttributes( Path path, SupportedAttribute[] attributes, LinkOption... linkOptions ) throws IOException {
         UnixSshPath unixPath = checkPath( path ).toAbsolutePath();
-        StringBuilder commandBuilder = new StringBuilder( "stat --printf \"" );
-        for ( int i = 0; i < attributes.length; i++ ) {
-            if ( i > 0 ) {
-                commandBuilder.append( ASCII_UNIT_SEPARATOR );
-            }
-            commandBuilder.append( attributes[i].option() );
-        }
-        commandBuilder.append( "\" " ).append( unixPath.toString() );
 
-        ExecuteResult result = execute( unixPath, commandBuilder.toString() );
+        String command = statCommand( attributes ) + " " + unixPath.toString();
+        ExecuteResult result = execute( unixPath, command );
         if ( result.getExitCode() == 0 ) {
-            String[] values = result.getStdout().split( ASCII_UNIT_SEPARATOR );
-            Map<String, Object> map = new HashMap<String, Object>();
-            int index = 0;
-            for ( SupportedAttribute attribute : attributes ) {
-                map.put( attribute.name(), attribute.toObject( values[index++] ) );
-            }
-            return map;
+            return statParse( result.getStdout(), attributes );
         }
         else {
             throw new IOException( "failed to list directory (" + result.getExitCode() + "): " +
@@ -624,6 +611,57 @@ public class UnixSshFileSystemProvider extends AbstractSshFileSystemProvider {
         }
     }
 
+    private String statCommand( SupportedAttribute[] attributes ) {
+        return statCommand( attributes, false );
+    }
+
+    private String statCommand( SupportedAttribute[] attributes, boolean newline ) {
+        StringBuilder commandBuilder = new StringBuilder( "stat --printf \"" );
+        for ( int i = 0; i < attributes.length; i++ ) {
+            if ( i > 0 ) {
+                commandBuilder.append( ASCII_UNIT_SEPARATOR );
+            }
+            commandBuilder.append( attributes[i].option() );
+        }
+        if ( newline ) {
+            commandBuilder.append( "\\n" );
+        }
+        return commandBuilder.append( "\"" ).toString();
+    }
+
+    private Map<String, Object> statParse( String result, SupportedAttribute... attributes ) {
+        String[] values = result.split( ASCII_UNIT_SEPARATOR );
+        Map<String, Object> map = new HashMap<String, Object>();
+        int index = 0;
+        for ( SupportedAttribute attribute : attributes ) {
+            map.put( attribute.name(), attribute.toObject( values[index++] ) );
+        }
+        return map;
+    }
+
+    Map<UnixSshPath, PosixFileAttributes> statDirectory( UnixSshPath directoryPath ) throws IOException {
+        Map<UnixSshPath, PosixFileAttributes> map = new HashMap<>();
+        SupportedAttribute[] allAttributes = SupportedAttribute.values();
+        String command = directoryPath.getFileSystem().getCommand( "find" ) + " "
+                + directoryPath.toAbsolutePath().toString()
+                + " -maxdepth 1 -type f -exec " + statCommand( allAttributes, true ) + " {} +";
+
+        ExecuteResult result = execute( directoryPath, command );
+        if ( result.getExitCode() != 0 ) {
+            throw new IOException( "failed to run " + command + " ("
+                    + result.getExitCode() + "): " + result.getStderr() );
+        }
+
+        for ( String file : result.getStdout().split( "\n" ) ) {
+            Map<String, Object> fileAttributes = statParse( file, allAttributes );
+            UnixSshPath filePath = directoryPath.toAbsolutePath().relativize( directoryPath.resolve(
+                    (String)fileAttributes.get( SupportedAttribute.name.toString() ) ) );
+            map.put( filePath, new PosixFileAttributesImpl( fileAttributes ) );
+        }
+
+        return map;
+    }
+
     private String toMode( Set<PosixFilePermission> permissions ) {
         int[] values = new int[] { 4, 2, 1 };
         int[] sections = new int[3];
@@ -684,11 +722,15 @@ public class UnixSshFileSystemProvider extends AbstractSshFileSystemProvider {
     private class BasicFileAttributesImpl implements BasicFileAttributes {
         protected Map<String, Object> map;
 
-        public BasicFileAttributesImpl( Path path, LinkOption... linkOptions ) throws IOException {
+        private BasicFileAttributesImpl( Map<String, Object> attributesMap ) {
+            this.map = attributesMap;
+        }
+
+        private BasicFileAttributesImpl( Path path, LinkOption... linkOptions ) throws IOException {
             this( path, null, linkOptions );
         }
 
-        protected BasicFileAttributesImpl( Path path, SupportedAttribute[] additionalAttributes, LinkOption... linkOptions ) throws IOException {
+        private BasicFileAttributesImpl( Path path, SupportedAttribute[] additionalAttributes, LinkOption... linkOptions ) throws IOException {
             SupportedAttribute[] supportedAttributes = null;
             if ( additionalAttributes == null ) {
                 supportedAttributes = BASIC_SUPPORTED_ATTRIBUTES;
@@ -743,7 +785,11 @@ public class UnixSshFileSystemProvider extends AbstractSshFileSystemProvider {
     }
 
     private class PosixFileAttributesImpl extends BasicFileAttributesImpl implements PosixFileAttributes {
-        public PosixFileAttributesImpl( Path path, LinkOption... linkOptions ) throws IOException {
+        private PosixFileAttributesImpl( Map<String, Object> attributeMap ) {
+            super( attributeMap );
+        }
+
+        private PosixFileAttributesImpl( Path path, LinkOption... linkOptions ) throws IOException {
             super( path, POSIX_ADDITIONAL_SUPPORTED_ATTRIBUTES, linkOptions );
         }
 
