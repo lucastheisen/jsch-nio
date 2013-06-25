@@ -31,7 +31,7 @@ public class UnixSshFileSystemWatchService implements WatchService {
     public UnixSshFileSystemWatchService( Long checkInterval, TimeUnit checkIntervalTimeUnit ) {
         logger.debug( "creating new watch service polling every {} {}", checkInterval, checkIntervalTimeUnit );
         this.checkInterval = checkInterval == null ? DEFAULT_CHECK_INTERVAL : checkInterval;
-        this.checkIntervalTimeUnit = checkIntervalTimeUnit == null 
+        this.checkIntervalTimeUnit = checkIntervalTimeUnit == null
                 ? DEFAULT_CHECK_INTERVAL_TIME_UNIT : checkIntervalTimeUnit;
         this.pendingKeys = new LinkedBlockingDeque<WatchKey>();
         executorService = Executors.newCachedThreadPool();
@@ -45,6 +45,12 @@ public class UnixSshFileSystemWatchService implements WatchService {
 
     boolean closed() {
         return closed;
+    }
+
+    void enqueue( WatchKey watchKey ) {
+        synchronized ( pendingKeys ) {
+            pendingKeys.add( watchKey );
+        }
     }
 
     void ensureOpen() {
@@ -65,13 +71,14 @@ public class UnixSshFileSystemWatchService implements WatchService {
         return null;
     }
 
-    WatchKey register( UnixSshPath path, Kind<?>[] events, Modifier... modifiers ) {
-        // TODO implement register
-        return null;
+    UnixSshPathWatchKey register( UnixSshPath path, Kind<?>[] events, Modifier... modifiers ) {
+        UnixSshPathWatchKey watchKey = new UnixSshPathWatchKey( this, path, events, checkIntervalTimeUnit.toMillis( checkInterval ) );
+        executorService.execute( watchKey );
+        return watchKey;
     }
-    
+
     void unregister( WatchKey watchKey ) {
-        
+
     }
 
     @Override
