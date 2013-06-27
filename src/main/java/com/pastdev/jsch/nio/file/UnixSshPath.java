@@ -8,6 +8,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.nio.file.AccessMode;
 import java.nio.file.LinkOption;
+import java.nio.file.NotDirectoryException;
 import java.nio.file.Path;
 import java.nio.file.ProviderMismatchException;
 import java.nio.file.WatchEvent;
@@ -15,6 +16,7 @@ import java.nio.file.WatchEvent.Kind;
 import java.nio.file.WatchEvent.Modifier;
 import java.nio.file.WatchKey;
 import java.nio.file.WatchService;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
@@ -202,6 +204,9 @@ public class UnixSshPath extends AbstractSshPath {
         }
         if ( !(watcher instanceof UnixSshFileSystemWatchService) ) {
             throw new ProviderMismatchException();
+        }
+        if ( !getFileSystem().provider().readAttributes( this, BasicFileAttributes.class ).isDirectory() ) {
+            throw new NotDirectoryException( this.toString() );
         }
         getFileSystem().provider().checkAccess( this, AccessMode.READ );
         return ((UnixSshFileSystemWatchService)watcher).register( this, events, modifiers );
