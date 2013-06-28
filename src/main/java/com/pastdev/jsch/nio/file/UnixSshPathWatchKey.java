@@ -2,6 +2,7 @@ package com.pastdev.jsch.nio.file;
 
 
 import java.io.IOException;
+import java.nio.file.ClosedWatchServiceException;
 import java.nio.file.Path;
 import java.nio.file.StandardWatchEventKinds;
 import java.nio.file.WatchEvent;
@@ -9,10 +10,15 @@ import java.nio.file.WatchEvent.Kind;
 import java.nio.file.WatchKey;
 import java.nio.file.attribute.PosixFileAttributes;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 
 
@@ -27,18 +33,29 @@ public class UnixSshPathWatchKey implements WatchKey, Runnable {
     private Map<UnixSshPath, UnixSshPathWatchEvent<Path>> deleteMap;
     private UnixSshPath dir;
     private Map<UnixSshPath, PosixFileAttributes> entries;
-    private ReentrantLock mapLock;
+    private boolean initialized;
+    private Set<Kind<?>> kindsToWatch;
     private Map<UnixSshPath, UnixSshPathWatchEvent<Path>> modifyMap;
-    private long pollingTimeout;
+    private long pollingInterval;
+    private TimeUnit pollingIntervalTimeUnit;
     private State state;
-    private ReentrantLock stateLock;
     private UnixSshFileSystemWatchService watchService;
 
-    public UnixSshPathWatchKey( UnixSshFileSystemWatchService watchService, UnixSshPath dir, Kind<?>[] events, long pollingTimeout ) {
+    private ReentrantLock mapLock = new ReentrantLock();
+    private ReentrantLock stateLock = new ReentrantLock();
+    private ReentrantLock pollerLock = new ReentrantLock();
+    private Condition initializationComplete = pollerLock.newCondition();
+    private Condition runImmediately = pollerLock.newCondition();
+
+    public UnixSshPathWatchKey( UnixSshFileSystemWatchService watchService, UnixSshPath dir, Kind<?>[] kinds, long pollingInterval, TimeUnit pollingIntervalTimeUnit ) {
         this.watchService = watchService;
         this.dir = dir;
-        this.pollingTimeout = pollingTimeout;
+        this.kindsToWatch = new HashSet<>();
+        this.kindsToWatch.addAll( Arrays.asList( kinds ) );
+        this.pollingInterval = pollingInterval;
+        this.pollingIntervalTimeUnit = pollingIntervalTimeUnit;
         this.cancelled = false;
+        this.initialized = false;
         this.addMap = new HashMap<>();
         this.deleteMap = new HashMap<>();
         this.modifyMap = new HashMap<>();
@@ -46,49 +63,55 @@ public class UnixSshPathWatchKey implements WatchKey, Runnable {
     }
 
     void addCreateEvent( UnixSshPath path ) {
-        try {
-            mapLock.lock();
-            logger.trace( "added: {}", path );
-            if ( !addMap.containsKey( path ) ) {
-                addMap.put( path, new UnixSshPathWatchEvent<Path>( StandardWatchEventKinds.ENTRY_CREATE, path ) );
+        if ( kindsToWatch.contains( StandardWatchEventKinds.ENTRY_CREATE ) ) {
+            try {
+                mapLock.lock();
+                logger.trace( "added: {}", path );
+                if ( !addMap.containsKey( path ) ) {
+                    addMap.put( path, new UnixSshPathWatchEvent<Path>( StandardWatchEventKinds.ENTRY_CREATE, path ) );
+                }
             }
+            finally {
+                mapLock.unlock();
+            }
+            signal();
         }
-        finally {
-            mapLock.unlock();
-        }
-        signal();
     }
 
     void addDeleteEvent( UnixSshPath path ) {
-        try {
-            mapLock.lock();
-            logger.trace( "deleted: {}", path );
-            if ( !deleteMap.containsKey( path ) ) {
-                deleteMap.put( path, new UnixSshPathWatchEvent<Path>( StandardWatchEventKinds.ENTRY_DELETE, path ) );
+        if ( kindsToWatch.contains( StandardWatchEventKinds.ENTRY_DELETE ) ) {
+            try {
+                mapLock.lock();
+                logger.trace( "deleted: {}", path );
+                if ( !deleteMap.containsKey( path ) ) {
+                    deleteMap.put( path, new UnixSshPathWatchEvent<Path>( StandardWatchEventKinds.ENTRY_DELETE, path ) );
+                }
             }
+            finally {
+                mapLock.unlock();
+            }
+            signal();
         }
-        finally {
-            mapLock.unlock();
-        }
-        signal();
     }
 
     void addModifyEvent( UnixSshPath path ) {
-        try {
-            mapLock.lock();
-            logger.trace( "modified: {}", path );
-            if ( modifyMap.containsKey( path ) ) {
-                modifyMap.get( path ).increment();
+        if ( kindsToWatch.contains( StandardWatchEventKinds.ENTRY_MODIFY ) ) {
+            try {
+                mapLock.lock();
+                logger.trace( "modified: {}", path );
+                if ( modifyMap.containsKey( path ) ) {
+                    modifyMap.get( path ).increment();
+                }
+                else {
+                    UnixSshPathWatchEvent<Path> event = new UnixSshPathWatchEvent<Path>( StandardWatchEventKinds.ENTRY_MODIFY, path );
+                    modifyMap.put( path, event );
+                }
             }
-            else {
-                UnixSshPathWatchEvent<Path> event = new UnixSshPathWatchEvent<Path>( StandardWatchEventKinds.ENTRY_MODIFY, path );
-                modifyMap.put( path, event );
+            finally {
+                mapLock.unlock();
             }
+            signal();
         }
-        finally {
-            mapLock.unlock();
-        }
-        signal();
     }
 
     @Override
@@ -163,36 +186,65 @@ public class UnixSshPathWatchKey implements WatchKey, Runnable {
 
     @Override
     public void run() {
+        boolean first = true;
         try {
             while ( true ) {
-                if ( ! isValid() ) {
+                if ( !isValid() ) {
                     break;
                 }
                 try {
                     logger.trace( "polling {}", dir );
                     Map<UnixSshPath, PosixFileAttributes> entries =
                             dir.getFileSystem().provider().statDirectory( dir );
-                    for ( UnixSshPath entryPath : entries.keySet() ) {
-                        if ( this.entries.containsKey( entryPath ) ) {
-                            if ( modified( entries.get( entryPath ), this.entries.remove( entryPath ) ) ) {
-                                addModifyEvent( entryPath );
+                    logger.trace( "got response {}", dir );
+                    if ( first ) {
+                        first = false;
+                        this.entries = entries;
+                        try {
+                            pollerLock.lock();
+                            logger.trace( "initialization complete got lock" );
+                            initialized = true;
+                            initializationComplete.signalAll();
+                            logger.debug( "poller is initialized" );
+                        }
+                        finally {
+                            pollerLock.unlock();
+                        }
+                    }
+                    else {
+                        for ( UnixSshPath entryPath : entries.keySet() ) {
+                            if ( this.entries.containsKey( entryPath ) ) {
+                                if ( modified( entries.get( entryPath ), this.entries.remove( entryPath ) ) ) {
+                                    addModifyEvent( entryPath );
+                                }
+                            }
+                            else {
+                                addCreateEvent( entryPath );
                             }
                         }
-                        else {
-                            addCreateEvent( entryPath );
+                        for ( UnixSshPath entryPath : this.entries.keySet() ) {
+                            addDeleteEvent( entryPath );
                         }
+                        this.entries = entries;
                     }
-                    for ( UnixSshPath entryPath : this.entries.keySet() ) {
-                        addDeleteEvent( entryPath );
-                    }
-                    this.entries = entries;
                 }
                 catch ( IOException e ) {
                     logger.error( "checking {} failed: {}", dir, e );
                     logger.debug( "checking directory failed: ", e );
                 }
-                Thread.sleep( pollingTimeout );
+
+                try {
+                    pollerLock.lock();
+                    logger.trace( "poller entering await {} {}", pollingInterval, pollingIntervalTimeUnit );
+                    runImmediately.await( pollingInterval, pollingIntervalTimeUnit );
+                }
+                finally {
+                    pollerLock.unlock();
+                }
             }
+        }
+        catch ( ClosedWatchServiceException e ) {
+            logger.debug( "watch service was closed, so exit" );
         }
         catch ( InterruptedException e ) {
             // time to close out
@@ -201,16 +253,48 @@ public class UnixSshPathWatchKey implements WatchKey, Runnable {
         logger.info( "poller stopped for {}", dir );
     }
 
+    void runImmediately() {
+        try {
+            pollerLock.lock();
+            runImmediately.signal();
+        }
+        finally {
+            pollerLock.unlock();
+        }
+    }
+
     private void signal() {
         try {
             stateLock.lock();
+            logger.trace( "signaling" );
             if ( state != State.SIGNALLED ) {
                 state = State.SIGNALLED;
+                logger.trace( "enqueueing {}", this );
                 watchService.enqueue( this );
             }
         }
         finally {
             stateLock.unlock();
+        }
+    }
+
+    boolean waitForInitialization( long time, TimeUnit timeUnit ) {
+        logger.debug( "waiting {} {} for initialization", time, timeUnit );
+        try {
+            pollerLock.lock();
+            logger.debug( "wait for initialization obtained lock" );
+            if ( initialized ) {
+                return true;
+            }
+            initializationComplete.await( time, timeUnit );
+            logger.debug( "initialization complete" );
+            return true;
+        }
+        catch ( InterruptedException e ) {
+            return false;
+        }
+        finally {
+            pollerLock.unlock();
         }
     }
 

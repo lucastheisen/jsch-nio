@@ -24,26 +24,24 @@ import org.slf4j.LoggerFactory;
 
 public class UnixSshFileSystemWatchService implements WatchService {
     private static Logger logger = LoggerFactory.getLogger( UnixSshFileSystemWatchService.class );
-    private static final long DEFAULT_CHECK_INTERVAL = 10;
-    private static final TimeUnit DEFAULT_CHECK_INTERVAL_TIME_UNIT = TimeUnit.MINUTES;
+    private static final long DEFAULT_POLLING_INTERVAL = 10;
+    private static final TimeUnit DEFAULT_POLLING_INTERVAL_TIME_UNIT = TimeUnit.MINUTES;
 
-    private long checkInterval;
-    private TimeUnit checkIntervalTimeUnit;
+    private long pollingInterval;
+    private TimeUnit pollingIntervalTimeUnit;
     private volatile boolean closed;
     private final ExecutorService executorService;
     private final LinkedBlockingDeque<WatchKey> pendingKeys;
-    private final Lock pendingKeysLock;
     private final Map<UnixSshPath, Future<?>> watchKeyFutures;
     private final Map<UnixSshPath, UnixSshPathWatchKey> watchKeys;
     private final Lock watchKeysLock;
 
-    public UnixSshFileSystemWatchService( Long checkInterval, TimeUnit checkIntervalTimeUnit ) {
-        logger.debug( "creating new watch service polling every {} {}", checkInterval, checkIntervalTimeUnit );
-        this.checkInterval = checkInterval == null ? DEFAULT_CHECK_INTERVAL : checkInterval;
-        this.checkIntervalTimeUnit = checkIntervalTimeUnit == null
-                ? DEFAULT_CHECK_INTERVAL_TIME_UNIT : checkIntervalTimeUnit;
+    public UnixSshFileSystemWatchService( Long pollingInterval, TimeUnit pollingIntervalTimeUnit ) {
+        logger.debug( "creating new watch service polling every {} {}", pollingInterval, pollingIntervalTimeUnit );
+        this.pollingInterval = pollingInterval == null ? DEFAULT_POLLING_INTERVAL : pollingInterval;
+        this.pollingIntervalTimeUnit = pollingIntervalTimeUnit == null
+                ? DEFAULT_POLLING_INTERVAL_TIME_UNIT : pollingIntervalTimeUnit;
         this.pendingKeys = new LinkedBlockingDeque<>();
-        this.pendingKeysLock = new ReentrantLock();
         this.executorService = Executors.newCachedThreadPool();
         this.watchKeys = new HashMap<>();
         this.watchKeyFutures = new HashMap<>();
@@ -61,13 +59,8 @@ public class UnixSshFileSystemWatchService implements WatchService {
     }
 
     void enqueue( WatchKey watchKey ) {
-        try {
-            pendingKeysLock.lock();
-            pendingKeys.add( watchKey );
-        }
-        finally {
-            pendingKeysLock.unlock();
-        }
+        ensureOpen();
+        pendingKeys.add( watchKey );
     }
 
     void ensureOpen() {
@@ -77,25 +70,13 @@ public class UnixSshFileSystemWatchService implements WatchService {
     @Override
     public WatchKey poll() {
         ensureOpen();
-        try {
-            pendingKeysLock.lock();
-            return pendingKeys.poll();
-        }
-        finally {
-            pendingKeysLock.unlock();
-        }
+        return pendingKeys.poll();
     }
 
     @Override
     public WatchKey poll( long timeout, TimeUnit unit ) throws InterruptedException {
         ensureOpen();
-        try {
-            pendingKeysLock.lock();
-            return pendingKeys.poll( timeout, unit );
-        }
-        finally {
-            pendingKeysLock.unlock();
-        }
+        return pendingKeys.poll( timeout, unit );
     }
 
     UnixSshPathWatchKey register( UnixSshPath path, Kind<?>[] events, Modifier... modifiers ) {
@@ -105,7 +86,7 @@ public class UnixSshFileSystemWatchService implements WatchService {
                 return watchKeys.get( path );
             }
 
-            UnixSshPathWatchKey watchKey = new UnixSshPathWatchKey( this, path, events, checkIntervalTimeUnit.toMillis( checkInterval ) );
+            UnixSshPathWatchKey watchKey = new UnixSshPathWatchKey( this, path, events, pollingInterval, pollingIntervalTimeUnit );
             watchKeys.put( path, watchKey );
             watchKeyFutures.put( path, executorService.submit( watchKey ) );
             return watchKey;
@@ -134,12 +115,6 @@ public class UnixSshFileSystemWatchService implements WatchService {
     @Override
     public WatchKey take() throws InterruptedException {
         ensureOpen();
-        try {
-            pendingKeysLock.lock();
-            return pendingKeys.take();
-        }
-        finally {
-            pendingKeysLock.unlock();
-        }
+        return pendingKeys.take();
     }
 }

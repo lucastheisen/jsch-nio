@@ -100,26 +100,27 @@ public class UnixSshFileSystemProvider extends AbstractSshFileSystemProvider {
         UnixSshPath unixPath = checkPath( path ).toAbsolutePath();
         String pathString = unixPath.toString();
 
-        ExecuteResult result = execute( unixPath, "test -e " + pathString );
+        String testCommand = unixPath.getFileSystem().getCommand( "test" );
+        ExecuteResult result = execute( unixPath, testCommand + " -e " + pathString );
         if ( result.getExitCode() != 0 ) {
             throw new NoSuchFileException( pathString );
         }
 
         Set<AccessMode> modesSet = toSet( modes );
         if ( modesSet.contains( AccessMode.READ ) ) {
-            result = execute( unixPath, "test -r " + pathString );
+            result = execute( unixPath, testCommand + " -r " + pathString );
             if ( result.getExitCode() != 0 ) {
                 throw new AccessDeniedException( pathString );
             }
         }
         if ( modesSet.contains( AccessMode.WRITE ) ) {
-            result = execute( unixPath, "test -w " + pathString );
+            result = execute( unixPath, testCommand + " -w " + pathString );
             if ( result.getExitCode() != 0 ) {
                 throw new AccessDeniedException( pathString );
             }
         }
         if ( modesSet.contains( AccessMode.EXECUTE ) ) {
-            result = execute( unixPath, "test -x " + pathString );
+            result = execute( unixPath, testCommand + " -x " + pathString );
             if ( result.getExitCode() != 0 ) {
                 throw new AccessDeniedException( pathString );
             }
@@ -154,7 +155,8 @@ public class UnixSshFileSystemProvider extends AbstractSshFileSystemProvider {
             }
         }
 
-        String command = cpOrMv + " " + unixFrom.toString() + " " + unixTo.toString();
+        String command = unixFrom.getFileSystem().getCommand( cpOrMv )
+                + " " + unixFrom.toString() + " " + unixTo.toString();
         ExecuteResult result = execute( unixTo, command );
         if ( result.getExitCode() != 0 ) {
             throw new IOException( "failed to " + command
@@ -173,7 +175,8 @@ public class UnixSshFileSystemProvider extends AbstractSshFileSystemProvider {
             }
         }
 
-        StringBuilder commandBuilder = new StringBuilder( "mkdir " );
+        StringBuilder commandBuilder = new StringBuilder( unixPath.getFileSystem().getCommand( "mkdir" ) )
+                .append( " " );
         if ( permissions != null ) {
             commandBuilder.append( "-m " ).append( toMode( permissions ) );
         }
@@ -203,7 +206,7 @@ public class UnixSshFileSystemProvider extends AbstractSshFileSystemProvider {
             }
         }
 
-        String command = "touch " + path.toString();
+        String command = path.getFileSystem().getCommand( "touch" ) + " " + path.toString();
         ExecuteResult result = execute( path, command );
         if ( result.getExitCode() != 0 ) {
             throw new IOException( "failed to " + command
@@ -230,13 +233,13 @@ public class UnixSshFileSystemProvider extends AbstractSshFileSystemProvider {
 
     private void delete( UnixSshPath path, BasicFileAttributes attributes ) throws IOException {
         if ( attributes.isDirectory() ) {
-            ExecuteResult result = execute( path, "rmdir " + path.toString() );
+            ExecuteResult result = execute( path, path.getFileSystem().getCommand( "rmdir" ) + " " + path.toString() );
             if ( result.getExitCode() != 0 ) {
                 throw new DirectoryNotEmptyException( path.toString() );
             }
         }
         else {
-            ExecuteResult result = execute( path, "unlink " + path.toString() );
+            ExecuteResult result = execute( path, path.getFileSystem().getCommand( "unlink" ) + " " + path.toString() );
             if ( result.getExitCode() != 0 ) {
                 throw new IOException( "failed to remove existing destination file "
                         + result.getExitCode() + ": " + path.toString() );
@@ -290,7 +293,7 @@ public class UnixSshFileSystemProvider extends AbstractSshFileSystemProvider {
     }
 
     @Override
-    public FileStore getFileStore( Path arg0 ) throws IOException {
+    public FileStore getFileStore( Path path ) throws IOException {
         // TODO Auto-generated method stub
         throw new UnsupportedOperationException( "no idea what a file store would mean in this context, so for now, you have to deal with this exception" );
     }
@@ -343,7 +346,8 @@ public class UnixSshFileSystemProvider extends AbstractSshFileSystemProvider {
     @Override
     public DirectoryStream<Path> newDirectoryStream( Path path, Filter<? super Path> filter ) throws IOException {
         UnixSshPath unixPath = checkPath( path );
-        ExecuteResult result = execute( unixPath, "ls -1 " + unixPath.toAbsolutePath().toString() );
+        ExecuteResult result = execute( unixPath, unixPath.getFileSystem().getCommand( "ls" )
+                + " -1 " + unixPath.toAbsolutePath().toString() );
         if ( result.getExitCode() == 0 ) {
             return new StandardDirectoryStream(
                     path, result.getStdout().split( "\n" ), filter );
@@ -373,7 +377,9 @@ public class UnixSshFileSystemProvider extends AbstractSshFileSystemProvider {
         UnixSshPath unixPath = checkPath( path ).toAbsolutePath();
         try {
             final ChannelExecWrapper channel = unixPath.getFileSystem()
-                    .getCommandRunner().open( "cat " + unixPath.toString() );
+                    .getCommandRunner()
+                    .open( unixPath.getFileSystem().getCommand( "cat" )
+                            + " " + unixPath.toString() );
             return new InputStream() {
                 private InputStream inputStream = channel.getInputStream();
 
@@ -441,7 +447,8 @@ public class UnixSshFileSystemProvider extends AbstractSshFileSystemProvider {
 
         try {
 
-            StringBuilder commandBuilder = new StringBuilder( "cat " );
+            StringBuilder commandBuilder = new StringBuilder( unixPath.getFileSystem().getCommand( "cat" ) )
+                    .append( " " );
             if ( options.contains( StandardOpenOption.APPEND )
                     && !options.contains( StandardOpenOption.TRUNCATE_EXISTING ) ) {
                 commandBuilder.append( ">> " );
@@ -476,7 +483,9 @@ public class UnixSshFileSystemProvider extends AbstractSshFileSystemProvider {
     int read( UnixSshPath path, long startIndex, ByteBuffer bytes ) throws IOException {
         try {
             int read = 0;
-            ChannelExecWrapper sshChannel = path.getFileSystem().getCommandRunner().open( "dd bs=1 skip=" + startIndex + " if=" + path.toString() );
+            ChannelExecWrapper sshChannel = path.getFileSystem().getCommandRunner().open(
+                    path.getFileSystem().getCommand( "dd" )
+                            + " bs=1 skip=" + startIndex + " if=" + path.toString() );
             try (InputStream in = sshChannel.getInputStream()) {
                 ReadableByteChannel inChannel = Channels.newChannel( in );
                 read = inChannel.read( bytes );
@@ -522,7 +531,7 @@ public class UnixSshFileSystemProvider extends AbstractSshFileSystemProvider {
     private Map<String, Object> readAttributes( Path path, SupportedAttribute[] attributes, LinkOption... linkOptions ) throws IOException {
         UnixSshPath unixPath = checkPath( path ).toAbsolutePath();
 
-        String command = statCommand( attributes ) + " " + unixPath.toString();
+        String command = statCommand( unixPath, attributes ) + " " + unixPath.toString();
         ExecuteResult result = execute( unixPath, command );
         if ( result.getExitCode() == 0 ) {
             return statParse( result.getStdout(), attributes );
@@ -556,7 +565,8 @@ public class UnixSshFileSystemProvider extends AbstractSshFileSystemProvider {
     }
 
     void setGroup( UnixSshPath path, GroupPrincipal group ) throws IOException {
-        String command = "chgrp " + group.getName() + " " + path.toString();
+        String command = path.getFileSystem().getCommand( "chgrp" )
+                + " " + group.getName() + " " + path.toString();
         ExecuteResult result = execute( path, command );
         if ( result.getExitCode() != 0 ) {
             throw new IOException( "failed to run " + command + " ("
@@ -565,7 +575,8 @@ public class UnixSshFileSystemProvider extends AbstractSshFileSystemProvider {
     }
 
     void setOwner( UnixSshPath path, UserPrincipal owner ) throws IOException {
-        String command = "chown " + owner.getName() + " " + path.toString();
+        String command = path.getFileSystem().getCommand( "chown" )
+                + " " + owner.getName() + " " + path.toString();
         ExecuteResult result = execute( path, command );
         if ( result.getExitCode() != 0 ) {
             throw new IOException( "failed to run " + command + " ("
@@ -574,7 +585,8 @@ public class UnixSshFileSystemProvider extends AbstractSshFileSystemProvider {
     }
 
     void setPermissions( UnixSshPath path, Set<PosixFilePermission> permissions ) throws IOException {
-        String command = "chmod " + toMode( permissions ) + " " + path.toString();
+        String command = path.getFileSystem().getCommand( "chmod" )
+                + " " + toMode( permissions ) + " " + path.toString();
         ExecuteResult result = execute( path, command );
         if ( result.getExitCode() != 0 ) {
             throw new IOException( "failed to run " + command + " ("
@@ -584,7 +596,8 @@ public class UnixSshFileSystemProvider extends AbstractSshFileSystemProvider {
 
     void setTimes( UnixSshPath path, FileTime lastModifiedTime, FileTime lastAccessTime ) throws IOException {
         if ( lastModifiedTime != null && lastModifiedTime.equals( lastAccessTime ) ) {
-            String command = "touch -d " + toTouchTime( lastModifiedTime ) + " " + path.toString();
+            String command = path.getFileSystem().getCommand( "touch" )
+                    + " -d " + toTouchTime( lastModifiedTime ) + " " + path.toString();
             ExecuteResult result = execute( path, command );
             if ( result.getExitCode() != 0 ) {
                 throw new IOException( "failed to run " + command + " ("
@@ -594,7 +607,8 @@ public class UnixSshFileSystemProvider extends AbstractSshFileSystemProvider {
         }
 
         if ( lastModifiedTime != null ) {
-            String command = "touch -a -d " + toTouchTime( lastModifiedTime ) + " " + path.toString();
+            String command = path.getFileSystem().getCommand( "touch" )
+                    + " -m -d " + toTouchTime( lastModifiedTime ) + " " + path.toString();
             ExecuteResult result = execute( path, command );
             if ( result.getExitCode() != 0 ) {
                 throw new IOException( "failed to run " + command + " ("
@@ -602,7 +616,8 @@ public class UnixSshFileSystemProvider extends AbstractSshFileSystemProvider {
             }
         }
         if ( lastAccessTime != null ) {
-            String command = "touch -a -d " + toTouchTime( lastModifiedTime ) + " " + path.toString();
+            String command = path.getFileSystem().getCommand( "touch" )
+                    + " -a -d " + toTouchTime( lastModifiedTime ) + " " + path.toString();
             ExecuteResult result = execute( path, command );
             if ( result.getExitCode() != 0 ) {
                 throw new IOException( "failed to run " + command + " ("
@@ -611,12 +626,13 @@ public class UnixSshFileSystemProvider extends AbstractSshFileSystemProvider {
         }
     }
 
-    private String statCommand( SupportedAttribute[] attributes ) {
-        return statCommand( attributes, false );
+    private String statCommand( UnixSshPath path, SupportedAttribute[] attributes ) {
+        return statCommand( path, attributes, false );
     }
 
-    private String statCommand( SupportedAttribute[] attributes, boolean newline ) {
-        StringBuilder commandBuilder = new StringBuilder( "stat --printf \"" );
+    private String statCommand( UnixSshPath path, SupportedAttribute[] attributes, boolean newline ) {
+        StringBuilder commandBuilder = new StringBuilder( path.getFileSystem().getCommand( "stat" ) )
+                .append( " --printf \"" );
         for ( int i = 0; i < attributes.length; i++ ) {
             if ( i > 0 ) {
                 commandBuilder.append( ASCII_UNIT_SEPARATOR );
@@ -644,7 +660,7 @@ public class UnixSshFileSystemProvider extends AbstractSshFileSystemProvider {
         SupportedAttribute[] allAttributes = SupportedAttribute.values();
         String command = directoryPath.getFileSystem().getCommand( "find" ) + " "
                 + directoryPath.toAbsolutePath().toString()
-                + " -maxdepth 1 -type f -exec " + statCommand( allAttributes, true ) + " {} +";
+                + " -maxdepth 1 -type f -exec " + statCommand( directoryPath, allAttributes, true ) + " {} +";
 
         ExecuteResult result = execute( directoryPath, command );
         if ( result.getExitCode() != 0 ) {
@@ -652,13 +668,19 @@ public class UnixSshFileSystemProvider extends AbstractSshFileSystemProvider {
                     + result.getExitCode() + "): " + result.getStderr() );
         }
 
-        for ( String file : result.getStdout().split( "\n" ) ) {
-            Map<String, Object> fileAttributes = statParse( file, allAttributes );
-            UnixSshPath filePath = directoryPath.toAbsolutePath().relativize( directoryPath.resolve(
-                    (String)fileAttributes.get( SupportedAttribute.name.toString() ) ) );
-            map.put( filePath, new PosixFileAttributesImpl( fileAttributes ) );
+        String stdout = result.getStdout();
+        if ( stdout.length() > 0 ) {
+            String[] results = result.getStdout().split( "\n" );
+            for ( String file : results ) {
+                logger.trace( "parsing stat response for {}", file );
+                Map<String, Object> fileAttributes = statParse( file, allAttributes );
+                UnixSshPath filePath = directoryPath.toAbsolutePath().relativize( directoryPath.resolve(
+                        (String)fileAttributes.get( SupportedAttribute.name.toString() ) ) );
+                map.put( filePath, new PosixFileAttributesImpl( fileAttributes ) );
+            }
         }
 
+        logger.trace( "returning map" );
         return map;
     }
 
@@ -685,7 +707,8 @@ public class UnixSshFileSystemProvider extends AbstractSshFileSystemProvider {
     }
 
     void truncateFile( UnixSshPath path, long size ) throws IOException {
-        String command = "truncate -s " + size + " " + path.toString();
+        String command = path.getFileSystem().getCommand( "truncate" )
+                + " -s " + size + " " + path.toString();
         ExecuteResult result = execute( path, command );
         if ( result.getExitCode() != 0 ) {
             throw new IOException( "failed to run " + command + " ("
@@ -701,7 +724,8 @@ public class UnixSshFileSystemProvider extends AbstractSshFileSystemProvider {
             temp.put( bytes );
             bytes.position( bytesPosition );
 
-            String command = "dd conv=notrunc bs=1 seek=" + startIndex + " of=" + path.toString();
+            String command = path.getFileSystem().getCommand( "dd" )
+                    + " conv=notrunc bs=1 seek=" + startIndex + " of=" + path.toString();
             ChannelExecWrapper sshChannel = path.getFileSystem().getCommandRunner().open( command );
             int written = 0;
             try (OutputStream out = sshChannel.getOutputStream()) {

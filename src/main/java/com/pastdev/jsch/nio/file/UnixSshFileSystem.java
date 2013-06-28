@@ -20,7 +20,6 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 
 
@@ -35,7 +34,7 @@ public class UnixSshFileSystem extends AbstractSshFileSystem {
         super( provider, uri, environment );
 
         this.defaultDirectory = new UnixSshPath( this, uri.getPath() );
-        if ( ! defaultDirectory.isAbsolute() ) {
+        if ( !defaultDirectory.isAbsolute() ) {
             throw new RuntimeException( "default directory must be absolute" );
         }
 
@@ -256,9 +255,10 @@ public class UnixSshFileSystem extends AbstractSshFileSystem {
 
     @Override
     public WatchService newWatchService() throws IOException {
-        // TODO make sure these values are set in environment, or get good defaults
-        return new UnixSshFileSystemWatchService( (Long)getFromEnvironment( "pollInterval" ), 
-                (TimeUnit)getFromEnvironment( "pollIntervalTimeUnit" ) );
+        // TODO make sure these values are set in environment, or get good
+        // defaults
+        return new UnixSshFileSystemWatchService( getLongFromEnvironment( "watchservice.polling.interval" ),
+                getTimeUnitFromEnvironment( "watchservice.polling.timeunit" ) );
     }
 
     @Override

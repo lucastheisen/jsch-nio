@@ -11,6 +11,7 @@ import java.nio.file.spi.FileSystemProvider;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 
 
 import com.jcraft.jsch.JSchException;
@@ -28,6 +29,7 @@ public abstract class AbstractSshFileSystem extends FileSystem {
         supportedFileAttributeViews.add( "basic" );
     }
 
+    private String binDir = null;
     private CommandRunner commandRunner;
     private Map<String, ?> environment;
     private AbstractSshFileSystemProvider provider;
@@ -37,6 +39,12 @@ public abstract class AbstractSshFileSystem extends FileSystem {
         this.provider = provider;
         this.uri = uri;
         this.environment = environment;
+
+        String binDirKey = "dir.bin";
+        if ( environment.containsKey( binDirKey ) ) {
+            binDir = (String)environment.get( binDirKey );
+        }
+
         try {
             // Construct a new sessionFactory from the URI authority, path, and
             // optional environment proxy
@@ -74,11 +82,12 @@ public abstract class AbstractSshFileSystem extends FileSystem {
     }
 
     String getCommand( String command ) {
-        if ( environment.containsKey( command ) ) {
-            return (String)environment.get( command );
+        String commandKey = "command." + command;
+        if ( environment.containsKey( commandKey ) ) {
+            return (String)environment.get( commandKey );
         }
-        else if ( environment.containsKey( "bin" ) ) {
-            return (String)environment.get( "bin" ) + PATH_SEPARATOR + command;
+        else if ( binDir != null ) {
+            return binDir + PATH_SEPARATOR + command;
         }
         else {
             return command;
@@ -91,6 +100,39 @@ public abstract class AbstractSshFileSystem extends FileSystem {
 
     public Object getFromEnvironment( String key ) {
         return environment.get( key );
+    }
+
+    public Long getLongFromEnvironment( String key ) {
+        Object value = environment.get( key );
+        if ( value == null ) {
+            return null;
+        }
+        if ( value instanceof Long ) {
+            return (long)value;
+        }
+        return Long.parseLong( value.toString() );
+    }
+    
+    public String getStringFromEnvironment( String key ) {
+        Object value = environment.get( key );
+        if ( value == null ) {
+            return null;
+        }
+        if ( value instanceof String ) {
+            return (String)value;
+        }
+        return value.toString();
+    }
+    
+    public TimeUnit getTimeUnitFromEnvironment( String key ) {
+        Object value = environment.get( key );
+        if ( value == null ) {
+            return null;
+        }
+        if ( value instanceof TimeUnit ) {
+            return (TimeUnit)value;
+        }
+        return TimeUnit.valueOf( value.toString().toUpperCase() );
     }
 
     public URI getUri() {

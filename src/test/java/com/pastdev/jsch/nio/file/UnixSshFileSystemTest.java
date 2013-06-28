@@ -13,11 +13,8 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.net.URI;
-import java.net.URISyntaxException;
 import java.nio.ByteBuffer;
 import java.nio.channels.SeekableByteChannel;
-import java.nio.charset.Charset;
 import java.nio.file.DirectoryStream;
 import java.nio.file.DirectoryStream.Filter;
 import java.nio.file.FileSystem;
@@ -31,99 +28,34 @@ import java.nio.file.attribute.PosixFilePermission;
 import java.nio.file.attribute.PosixFilePermissions;
 import java.util.Date;
 import java.util.EnumSet;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
-import java.util.Properties;
 import java.util.Set;
 import java.util.UUID;
 
 
 import org.junit.AfterClass;
-import org.junit.Assume;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 
-import com.jcraft.jsch.JSchException;
-import com.pastdev.jsch.DefaultSessionFactory;
 import com.pastdev.jsch.IOUtils;
 
 
-public class UnixSshFileSystemTest {
+public class UnixSshFileSystemTest extends UnixSshFileSystemTestUtils {
     private static Logger logger = LoggerFactory.getLogger( UnixSshFileSystemTest.class );
     private static final String expected = "Lets give em something to talk about.";
-    private static String filesystemPath;
-    private static String hostname;
-    private static int port;
-    private static Properties properties;
-    private static String scpPath;
-    private static URI uri;
-    private static String username;
-    private static final Charset UTF8 = Charset.forName( "UTF-8" );
-
+    
     @AfterClass
-    public static void destroyClass() {
-        IOUtils.closeAndLogException( FileSystems.getFileSystem( uri ) );
+    public static void afterClass() {
+        closeFileSystem();
     }
-
+    
     @BeforeClass
-    public static void initializeClass() {
-        InputStream inputStream = null;
-        try {
-            inputStream = ClassLoader.getSystemResourceAsStream( "configuration.properties" );
-            Assume.assumeNotNull( inputStream );
-            properties = new Properties();
-            properties.load( inputStream );
-        }
-        catch ( IOException e ) {
-            logger.warn( "cant find properties file (tests will be skipped): {}", e.getMessage() );
-            logger.debug( "cant find properties file:", e );
-            Assume.assumeNoException( e );
-        }
-        finally {
-            if ( inputStream != null ) {
-                try {
-                    inputStream.close();
-                }
-                catch ( IOException e ) {
-                    // really, i dont care...
-                }
-            }
-        }
-
-        String knownHosts = properties.getProperty( "ssh.knownHosts" );
-        String privateKey = properties.getProperty( "ssh.privateKey" );
-        username = properties.getProperty( "scp.out.test.username" );
-        hostname = "localhost";
-        scpPath = properties.getProperty( "scp.out.test.scpPath" );
-        filesystemPath = properties.getProperty( "scp.out.test.filesystemPath" );
-        port = Integer.parseInt( properties.getProperty( "scp.out.test.port" ) );
-
-        DefaultSessionFactory defaultSessionFactory = new DefaultSessionFactory( username, hostname, port );
-        try {
-            defaultSessionFactory.setKnownHosts( knownHosts );
-            defaultSessionFactory.setIdentityFromPrivateKey( privateKey );
-            Map<String, Object> environment = new HashMap<String, Object>();
-            environment.put( "defaultSessionFactory", defaultSessionFactory );
-            environment.put( "find", "/bin/find" );
-
-            uri = new URI( "ssh.unix://" + username + "@" + hostname + ":" + port + scpPath );
-            FileSystems.newFileSystem( uri, environment );
-        }
-        catch ( JSchException e ) {
-            Assume.assumeNoException( e );
-        }
-        catch ( URISyntaxException e ) {
-            logger.error( "unable to build default filesystem uri: {}", e.getMessage() );
-            logger.error( "unable to build default filesystem uri: ", e );
-            fail( "unable to build default filesystem uri: " + e.getMessage() );
-        }
-        catch ( IOException e ) {
-            Assume.assumeNoException( e );
-        }
+    public static void beforeClass() {
+        initializeFileSystem();
     }
 
     @Test
@@ -457,6 +389,6 @@ public class UnixSshFileSystemTest {
         assertEquals( username, path.getUsername() );
         assertEquals( hostname, path.getHostname() );
         assertEquals( port, path.getPort() );
-        assertEquals( scpPath + PATH_SEPARATOR + filename, path.toString() );
+        assertEquals( sshPath + PATH_SEPARATOR + filename, path.toString() );
     }
 }
