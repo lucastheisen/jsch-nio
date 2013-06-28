@@ -542,6 +542,10 @@ public class UnixSshFileSystemProvider extends AbstractSshFileSystemProvider {
                     "err='" + result.getStderr() + "'" );
         }
     }
+    
+    void removeFileSystem( UnixSshFileSystem fileSystem ) {
+        fileSystemMap.remove( fileSystem.getUri().resolve( PATH_SEPARATOR_STRING ) );
+    }
 
     @Override
     public void setAttribute( Path path, String attribute, Object value, LinkOption... linkOptions ) throws IOException {

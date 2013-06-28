@@ -76,11 +76,6 @@ public abstract class AbstractSshFileSystem extends FileSystem {
         }
     }
 
-    @Override
-    public void close() throws IOException {
-        commandRunner.close();
-    }
-
     String getCommand( String command ) {
         String commandKey = "command." + command;
         if ( environment.containsKey( commandKey ) ) {

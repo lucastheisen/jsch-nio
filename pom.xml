@@ -10,7 +10,7 @@
   <name>JSch NIO FileSystem Implementation</name>
   <description>A Java 7 FileSystem implementation over SSH using JSch and jsch-extension</description>
   <url>https://github.com/lucastheisen/jsch-nio</url>
-  
+
   <licenses>
     <license>
       <name>MIT license (also X11)</name>
@@ -28,7 +28,7 @@
     <name>pastdev.com</name>
     <url>http://pastdev.com</url>
   </organization>
-  
+
   <developers>
     <developer>
       <id>lucastheisen</id>
@@ -41,7 +41,7 @@
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
   </properties>
-  
+
   <dependencies>
     <dependency>
       <groupId>com.jcraft</groupId>
@@ -72,7 +72,7 @@
       <scope>test</scope>
     </dependency>
   </dependencies>
-  
+
   <build>
     <finalName>${project.artifactId}</finalName>
     <plugins>
@@ -84,6 +84,19 @@
           <source>1.7</source>
           <target>1.7</target>
         </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-gpg-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>sign-artifacts</id>
+            <phase>verify</phase>
+            <goals>
+              <goal>sign</goal>
+            </goals>
+          </execution>
+        </executions>
       </plugin>
     </plugins>
   </build>

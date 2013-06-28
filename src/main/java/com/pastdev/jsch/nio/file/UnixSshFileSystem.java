@@ -41,6 +41,12 @@ public class UnixSshFileSystem extends AbstractSshFileSystem {
         rootDirectory = new UnixSshPath( this, PATH_SEPARATOR_STRING );
     }
 
+    @Override
+    public void close() throws IOException {
+        getCommandRunner().close();
+        provider().removeFileSystem( this );
+    }
+
     UnixSshPath getDefaultDirectory() {
         return defaultDirectory;
     }
