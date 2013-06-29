@@ -22,8 +22,10 @@ import java.util.concurrent.TimeUnit;
 
 
 import org.junit.AfterClass;
+import org.junit.Assume;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.junit.internal.AssumptionViolatedException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -33,15 +35,25 @@ import com.pastdev.jsch.IOUtils;
 
 public class UnixSshFileSystemWatchServiceTest extends UnixSshFileSystemTestUtils {
     private static Logger logger = LoggerFactory.getLogger( UnixSshFileSystemWatchServiceTest.class );
-    
+
     @AfterClass
     public static void afterClass() {
-        closeFileSystem();
+        try {
+            closeFileSystem();
+        }
+        catch ( AssumptionViolatedException e ) {
+            Assume.assumeNoException( e );
+        }
     }
-    
+
     @BeforeClass
     public static void beforeClass() {
-        initializeFileSystem();
+        try {
+            initializeFileSystem();
+        }
+        catch ( AssumptionViolatedException e ) {
+            Assume.assumeNoException( e );
+        }
     }
 
     @Test
@@ -88,7 +100,7 @@ public class UnixSshFileSystemWatchServiceTest extends UnixSshFileSystemTestUtil
                     Path eventPath = (Path)event.context();
                     assertEquals( filename, eventPath.toString() );
 
-                    try (InputStream inputStream = eventPath.getFileSystem().provider().newInputStream( 
+                    try (InputStream inputStream = eventPath.getFileSystem().provider().newInputStream(
                             rootPath.resolve( eventPath ) )) {
                         assertEquals( expected, IOUtils.copyToString( inputStream ) );
                     }

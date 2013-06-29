@@ -37,7 +37,9 @@ public class UnixSshFileSystemTestUtils {
     public static final Charset UTF8 = Charset.forName( "UTF-8" );
 
     public static void closeFileSystem() {
-        IOUtils.closeAndLogException( FileSystems.getFileSystem( uri ) );
+        if ( uri != null ) {
+            IOUtils.closeAndLogException( FileSystems.getFileSystem( uri ) );
+        }
     }
 
     public static void initializeFileSystem() {

@@ -1,3 +1,5 @@
+# Yes, i use winblows, i know, not really ideal...  however, 
+# i like having drivers that work
 ssh.knownHosts=C:/Cygwin/home/ltheisen/.ssh/known_hosts
 ssh.privateKey=C:/Cygwin/home/ltheisen/.ssh/id_dsa
 scp.out.test.scpPath=/tmp
