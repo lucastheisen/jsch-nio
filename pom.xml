@@ -2,6 +2,12 @@
   xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
 
+  <parent>
+    <groupId>org.sonatype.oss</groupId>
+    <artifactId>oss-parent</artifactId>
+    <version>7</version>
+  </parent>
+
   <groupId>com.pastdev</groupId>
   <artifactId>jsch-nio</artifactId>
   <version>0.0.1-SNAPSHOT</version>
@@ -56,7 +62,7 @@
     <dependency>
       <groupId>com.pastdev</groupId>
       <artifactId>jsch-extension</artifactId>
-      <version>0.0.1-SNAPSHOT</version>
+      <version>0.1.0</version>
     </dependency>
 
     <dependency>
@@ -84,19 +90,6 @@
           <source>1.7</source>
           <target>1.7</target>
         </configuration>
-      </plugin>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-gpg-plugin</artifactId>
-        <executions>
-          <execution>
-            <id>sign-artifacts</id>
-            <phase>verify</phase>
-            <goals>
-              <goal>sign</goal>
-            </goals>
-          </execution>
-        </executions>
       </plugin>
     </plugins>
   </build>
