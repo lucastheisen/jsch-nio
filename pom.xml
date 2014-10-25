@@ -9,7 +9,7 @@
 
   <groupId>com.pastdev</groupId>
   <artifactId>jsch-nio</artifactId>
-  <version>0.1.2-SNAPSHOT</version>
+  <version>0.1.3-SNAPSHOT</version>
   <packaging>jar</packaging>
 
   <name>JSch NIO FileSystem Implementation</name>
