@@ -19,6 +19,7 @@ import java.nio.file.DirectoryStream;
 import java.nio.file.DirectoryStream.Filter;
 import java.nio.file.FileSystem;
 import java.nio.file.FileSystems;
+import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
@@ -270,6 +271,36 @@ public class UnixSshFileSystemTest extends UnixSshFileSystemTestUtils {
         }
         finally {
             IOUtils.deleteFiles( file, rootDir );
+        }
+
+        try {
+            // should throw exception as file no longer exists
+            path.getFileSystem().provider().readAttributes( path, "creationTime,size,fileKey" );
+            fail( "NoSuchFileException should have been thrown" );
+        }
+        catch ( NoSuchFileException e ) {
+            logger.debug( "as expected, [{}] does not exist", e.getFile() );
+        }
+        catch ( IOException e ) {
+            logger.error( "could not read attribues from {}: {}", path, e );
+            logger.debug( "could not read attributes:", e );
+            fail( "could not read attributes from " + path + ": " + e.getMessage() );
+        }
+
+        try {
+            // should throw exception as dir no longer exists
+            path.getFileSystem().provider().readAttributes(
+                FileSystems.getFileSystem( uri ).getPath( root ),
+                "creationTime,size,fileKey" );
+            fail( "NoSuchFileException should have been thrown" );
+        }
+        catch ( NoSuchFileException e ) {
+            logger.debug( "as expected, [{}] does not exist", e.getFile() );
+        }
+        catch ( IOException e ) {
+            logger.error( "could not read attribues from {}: {}", path, e );
+            logger.debug( "could not read attributes:", e );
+            fail( "could not read attributes from " + path + ": " + e.getMessage() );
         }
     }
 

@@ -513,7 +513,19 @@ public class UnixSshFileSystemProvider extends AbstractSshFileSystemProvider {
     private Map<String, Object> readAttributes( Path path, SupportedAttribute[] attributes, LinkOption... linkOptions ) throws IOException {
         UnixSshPath unixPath = checkPath( path ).toAbsolutePath();
         String command = statCommand( unixPath, attributes ) + " " + unixPath.toString();
-        return statParse( executeForStdout( unixPath, command ), attributes );
+        String result = null;
+        try {
+            result = executeForStdout( unixPath, command );
+        }
+        catch ( UnixSshCommandFailedException e ) {
+            if ( exists( unixPath ) ) {
+                throw e;
+            }
+            else {
+                throw new NoSuchFileException( path.toString() );
+            }
+        }
+        return statParse( result, attributes );
     }
 
     void removeFileSystem( UnixSshFileSystem fileSystem ) {
