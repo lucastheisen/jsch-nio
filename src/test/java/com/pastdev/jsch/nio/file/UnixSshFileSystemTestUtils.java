@@ -36,6 +36,11 @@ public class UnixSshFileSystemTestUtils {
     protected static String username;
     public static final Charset UTF8 = Charset.forName( "UTF-8" );
 
+    static {
+        java.security.Security.insertProviderAt(
+                new org.bouncycastle.jce.provider.BouncyCastleProvider(), 1 );
+    }
+
     public static void closeFileSystem() {
         if ( uri != null ) {
             IOUtils.closeAndLogException( FileSystems.getFileSystem( uri ) );
