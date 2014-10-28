@@ -19,6 +19,7 @@ import java.nio.file.DirectoryStream;
 import java.nio.file.DirectoryStream.Filter;
 import java.nio.file.FileSystem;
 import java.nio.file.FileSystems;
+import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -30,7 +31,9 @@ import java.nio.file.attribute.PosixFilePermissions;
 import java.util.Date;
 import java.util.EnumSet;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.UUID;
 
@@ -48,12 +51,12 @@ import com.pastdev.jsch.IOUtils;
 public class UnixSshFileSystemTest extends UnixSshFileSystemTestUtils {
     private static Logger logger = LoggerFactory.getLogger( UnixSshFileSystemTest.class );
     private static final String expected = "Lets give em something to talk about.";
-    
+
     @AfterClass
     public static void afterClass() {
         closeFileSystem();
     }
-    
+
     @BeforeClass
     public static void beforeClass() {
         initializeFileSystem();
@@ -260,8 +263,8 @@ public class UnixSshFileSystemTest extends UnixSshFileSystemTestUtils {
             long now = new Date().getTime();
             Map<String, Object> map = path.getFileSystem().provider().readAttributes( path, "creationTime,size,fileKey" );
 
-            assertTrue( now > ((FileTime)map.get( "creationTime" )).toMillis() );
-            assertEquals( Long.valueOf( expected.length() ), (Long)map.get( "size" ) );
+            assertTrue( now > ((FileTime) map.get( "creationTime" )).toMillis() );
+            assertEquals( Long.valueOf( expected.length() ), (Long) map.get( "size" ) );
             assertNotNull( map.get( "fileKey" ) );
         }
         catch ( IOException e ) {
@@ -290,8 +293,8 @@ public class UnixSshFileSystemTest extends UnixSshFileSystemTestUtils {
         try {
             // should throw exception as dir no longer exists
             path.getFileSystem().provider().readAttributes(
-                FileSystems.getFileSystem( uri ).getPath( root ),
-                "creationTime,size,fileKey" );
+                    FileSystems.getFileSystem( uri ).getPath( root ),
+                    "creationTime,size,fileKey" );
             fail( "NoSuchFileException should have been thrown" );
         }
         catch ( NoSuchFileException e ) {
@@ -396,7 +399,7 @@ public class UnixSshFileSystemTest extends UnixSshFileSystemTestUtils {
             fail( "could not write files to " + rootDir + ": " + e.getMessage() );
         }
 
-        UnixSshPath rootPath = (UnixSshPath)FileSystems.getFileSystem( uri ).getPath( root );
+        UnixSshPath rootPath = (UnixSshPath) FileSystems.getFileSystem( uri ).getPath( root );
         try {
             Map<UnixSshPath, PosixFileAttributes> map = rootPath.getFileSystem().provider().statDirectory( rootPath );
             assertEquals( 4, map.size() );
@@ -416,10 +419,40 @@ public class UnixSshFileSystemTest extends UnixSshFileSystemTestUtils {
     public void testUri() {
         String filename = "silly.txt";
         Path tempPath = Paths.get( uri );
-        UnixSshPath path = (UnixSshPath)tempPath.resolve( filename );
+        UnixSshPath path = (UnixSshPath) tempPath.resolve( filename );
         assertEquals( username, path.getUsername() );
         assertEquals( hostname, path.getHostname() );
         assertEquals( port, path.getPort() );
         assertEquals( sshPath + PATH_SEPARATOR + filename, path.toString() );
+    }
+
+    @Test
+    public void testDirectoryStreamEmptyDir() throws IOException {
+        final String root = UUID.randomUUID().toString();
+        Path rootPath = Paths.get( filesystemPath, root );
+
+        // create test dir
+        assertFalse( Files.exists( rootPath ) );
+        Files.createDirectories( rootPath );
+        assertTrue( Files.exists( rootPath ) );
+        assertTrue( Files.isDirectory( rootPath ) );
+
+        // test dirstream
+        DirectoryStream<Path> ds = Files.newDirectoryStream(
+                FileSystems.getFileSystem( uri ).getPath( root ) );
+        try {
+            Iterator<Path> iter = ds.iterator();
+            assertFalse( iter.hasNext() );
+            try {
+                iter.next();
+                fail( "expected an exception" );
+            }
+            catch ( NoSuchElementException e ) {
+                // pass
+            }
+        }
+        finally {
+            ds.close();
+        }
     }
 }

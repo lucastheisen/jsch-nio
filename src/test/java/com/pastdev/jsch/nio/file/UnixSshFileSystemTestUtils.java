@@ -75,7 +75,8 @@ public class UnixSshFileSystemTestUtils {
         String privateKey = properties.getProperty( "ssh.privateKey" );
         username = properties.getProperty( "ssh.username" );
         hostname = "localhost";
-        port = Integer.parseInt( properties.getProperty( "ssh.port" ) );
+        String portString = properties.getProperty( "ssh.port" );
+        port = portString == null ? 22 : Integer.parseInt( portString );
 
         sshPath = properties.getProperty( "ssh.test.sshPath" );
         filesystemPath = properties.getProperty( "ssh.test.filesystemPath" );
