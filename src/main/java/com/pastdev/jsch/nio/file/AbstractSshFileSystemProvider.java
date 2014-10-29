@@ -22,11 +22,16 @@ abstract public class AbstractSshFileSystemProvider extends FileSystemProvider {
         private List<Path> accepted;
 
         public StandardDirectoryStream( Path parent, String[] entries, Filter<? super Path> filter ) throws IOException {
-            accepted = new ArrayList<Path>();
-            for ( String entry : entries ) {
-                Path path = parent.resolve( entry );
-                if ( filter == null || filter.accept( path ) ) {
-                    accepted.add( path );
+            if ( entries == null ) {
+                accepted = Collections.emptyList();
+            }
+            else {
+                accepted = new ArrayList<Path>();
+                for ( String entry : entries ) {
+                    Path path = parent.resolve( entry );
+                    if ( filter == null || filter.accept( path ) ) {
+                        accepted.add( path );
+                    }
                 }
             }
         }

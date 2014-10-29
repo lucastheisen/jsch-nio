@@ -337,8 +337,11 @@ public class UnixSshFileSystemProvider extends AbstractSshFileSystemProvider {
         UnixSshPath unixPath = checkPath( path );
         String result = executeForStdout( unixPath, unixPath.getFileSystem().getCommand( "ls" )
                 + " -1 " + unixPath.toAbsolutePath().toString() );
-        return new StandardDirectoryStream(
-                path, result.split( "\n" ), filter );
+        String[] items = result.split( "\n" );
+        if ( items.length == 1 && items[0].isEmpty() ) {
+            items = null;
+        }
+        return new StandardDirectoryStream( path, items, filter );
     }
 
     @Override
