@@ -20,6 +20,7 @@ import java.nio.file.DirectoryStream.Filter;
 import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.FileStore;
 import java.nio.file.FileSystem;
+import java.nio.file.FileSystemNotFoundException;
 import java.nio.file.LinkOption;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.OpenOption;
@@ -291,7 +292,7 @@ public class UnixSshFileSystemProvider extends AbstractSshFileSystemProvider {
     public FileSystem getFileSystem( URI uri ) {
         UnixSshFileSystem fileSystem = fileSystemMap.get( uri.resolve( PATH_SEPARATOR_STRING ) );
         if ( fileSystem == null ) {
-            throw new RuntimeException( "no filesystem defined for " + uri.toString() );
+            throw new FileSystemNotFoundException( "no filesystem defined for " + uri.toString() );
         }
         return fileSystem;
     }
