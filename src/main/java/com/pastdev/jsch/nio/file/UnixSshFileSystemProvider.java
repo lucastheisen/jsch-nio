@@ -600,13 +600,28 @@ public class UnixSshFileSystemProvider extends AbstractSshFileSystemProvider {
     }
 
     private String statCommand( UnixSshPath path, SupportedAttribute[] attributes, boolean newline ) {
-        StringBuilder commandBuilder = new StringBuilder( path.getFileSystem().getCommand( "stat" ) )
-                .append( " --printf \"" );
+
+        final StringBuilder commandBuilder;
+        final Variant variant = path.getFileSystem().getVariant("stat");
+        switch(variant) {
+            case BSD:
+                commandBuilder = new StringBuilder(path.getFileSystem().getCommand("stat"))
+                        .append(" -f \"");
+                break;
+
+            case GNU:
+            default:
+                commandBuilder = new StringBuilder( path.getFileSystem().getCommand( "stat" ) )
+                        .append( " --printf \"" );
+                break;
+        }
+
+        // Default case
         for ( int i = 0; i < attributes.length; i++ ) {
             if ( i > 0 ) {
                 commandBuilder.append( ASCII_UNIT_SEPARATOR );
             }
-            commandBuilder.append( attributes[i].option() );
+            commandBuilder.append( attributes[i].option(variant) );
         }
         if ( newline ) {
             commandBuilder.append( "\\n" );
@@ -791,20 +806,20 @@ public class UnixSshFileSystemProvider extends AbstractSshFileSystemProvider {
     }
 
     private enum SupportedAttribute {
-        creationTime("%W", FileTime.class),
-        group("%G", GroupPrincipal.class),
-        fileKey("%i", Long.TYPE),
-        lastAccessTime("%X", FileTime.class),
-        lastModifiedTime("%Y", FileTime.class),
-        lastChangedTime("%Z", FileTime.class),
-        name("%n", String.class),
-        owner("%U", UserPrincipal.class),
-        permissions("%A", Set.class),
-        size("%s", Long.TYPE),
-        isRegularFile("%F", Boolean.TYPE),
-        isDirectory("%F", Boolean.TYPE),
-        isSymbolicLink("%F", Boolean.TYPE),
-        isOther("%F", Boolean.TYPE);
+        creationTime("%W", "%B", FileTime.class),
+        group("%G", "%Sg", GroupPrincipal.class),
+        fileKey("%i", "%i", Long.TYPE),
+        lastAccessTime("%X", "%a", FileTime.class),
+        lastModifiedTime("%Y", "%m", FileTime.class),
+        lastChangedTime("%Z", "%c", FileTime.class),
+        name("%n", "%N", String.class),
+        owner("%U", "%Su", UserPrincipal.class),
+        permissions("%A", "%Sp", Set.class),
+        size("%s", "%z", Long.TYPE),
+        isRegularFile("%F", "%HT", Boolean.TYPE),
+        isDirectory("%F", "%HT", Boolean.TYPE),
+        isSymbolicLink("%F", "%HT", Boolean.TYPE),
+        isOther("%F", "%HT", Boolean.TYPE);
 
         private static Map<String, SupportedAttribute> lookup;
         private static final char[] allPermissions = new char[] { 'r', 'w', 'x', 'r', 'w', 'x', 'r', 'w', 'x' };
@@ -816,11 +831,14 @@ public class UnixSshFileSystemProvider extends AbstractSshFileSystemProvider {
             }
         }
 
-        private String option;
+
+        private String gnuOption;
+        private final String bsdOption;
         private Class<?> valueClass;
 
-        private SupportedAttribute( String option, Class<?> valueClass ) {
-            this.option = option;
+        private SupportedAttribute( String gnuOption, String bsdOption, Class<?> valueClass ) {
+            this.gnuOption = gnuOption;
+            this.bsdOption = bsdOption;
             this.valueClass = valueClass;
         }
 
@@ -828,8 +846,15 @@ public class UnixSshFileSystemProvider extends AbstractSshFileSystemProvider {
             return lookup.get( attribute );
         }
 
-        public String option() {
-            return option;
+        public String option(Variant variant) {
+            switch(variant) {
+                case BSD:
+                    return bsdOption;
+                case GNU:
+                    return gnuOption;
+                default:
+                    throw new AssertionError("Unhandled variant: " + variant);
+            }
         }
 
         public Object toObject( String value ) {

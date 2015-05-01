@@ -89,12 +89,46 @@ public abstract class AbstractSshFileSystem extends FileSystem {
         }
     }
 
+    Variant defaultVariant;
+    public Variant getVariant(String command) {
+        String variantKey = "variant." + command;
+        if ( environment.containsKey( variantKey ) ) {
+            return (Variant)environment.get( variantKey );
+        }
+
+        // Get the host type
+        if (defaultVariant == null) {
+            final CommandRunner.ExecuteResult execute;
+            try {
+                execute = commandRunner.execute("uname -s");
+            } catch (JSchException | IOException e) {
+                return Variant.GNU;
+            }
+
+            if (execute.getExitCode() != 0) {
+                return Variant.GNU;
+            }
+
+            switch(execute.getStdout().trim().toLowerCase()) {
+                case "darwin":
+                    defaultVariant = Variant.BSD;
+                    break;
+                default:
+                    // TODO
+                    defaultVariant = Variant.GNU;
+            }
+
+        }
+
+        return defaultVariant;
+    }
+
     public CommandRunner getCommandRunner() {
         return commandRunner;
     }
 
     public Object getFromEnvironment( String key ) {
-        return environment.get( key );
+        return environment.get(key);
     }
 
     public Long getLongFromEnvironment( String key ) {
@@ -105,7 +139,7 @@ public abstract class AbstractSshFileSystem extends FileSystem {
         if ( value instanceof Long ) {
             return (long)value;
         }
-        return Long.parseLong( value.toString() );
+        return Long.parseLong(value.toString());
     }
     
     public String getStringFromEnvironment( String key ) {
@@ -127,7 +161,7 @@ public abstract class AbstractSshFileSystem extends FileSystem {
         if ( value instanceof TimeUnit ) {
             return (TimeUnit)value;
         }
-        return TimeUnit.valueOf( value.toString().toUpperCase() );
+        return TimeUnit.valueOf(value.toString().toUpperCase());
     }
 
     public URI getUri() {
@@ -143,4 +177,5 @@ public abstract class AbstractSshFileSystem extends FileSystem {
     public Set<String> supportedFileAttributeViews() {
         return supportedFileAttributeViews;
     }
+
 }
