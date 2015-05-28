@@ -8,6 +8,7 @@ import java.nio.channels.NonReadableChannelException;
 import java.nio.channels.NonWritableChannelException;
 import java.nio.channels.SeekableByteChannel;
 import java.nio.file.FileAlreadyExistsException;
+import java.nio.file.NoSuchFileException;
 import java.nio.file.OpenOption;
 import java.nio.file.StandardOpenOption;
 import java.nio.file.attribute.FileAttribute;
@@ -38,7 +39,7 @@ public class UnixSshSeekableByteChannel implements SeekableByteChannel {
             provider.checkAccess( path );
             attributes = provider.readAttributes( path, PosixFileAttributes.class );
         }
-        catch ( FileNotFoundException e ) {
+        catch ( NoSuchFileException e ) {
         }
 
         boolean create = false;
@@ -54,7 +55,7 @@ public class UnixSshSeekableByteChannel implements SeekableByteChannel {
             }
         }
         else if ( attributes == null ) {
-            throw new FileNotFoundException( "file not found and no CREATE/CREATE_NEW specified for "
+            throw new NoSuchFileException( "file not found and no CREATE/CREATE_NEW specified for "
                     + path.toString() );
         }
 
