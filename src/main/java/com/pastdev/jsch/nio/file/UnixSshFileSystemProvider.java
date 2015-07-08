@@ -474,7 +474,10 @@ public class UnixSshFileSystemProvider extends AbstractSshFileSystemProvider {
                             + " bs=1 skip=" + startIndex + " if=" + path.toString() );
             try (InputStream in = sshChannel.getInputStream()) {
                 ReadableByteChannel inChannel = Channels.newChannel( in );
-                read = inChannel.read( bytes );
+                int localRead;
+                while (bytes.hasRemaining() && (localRead = inChannel.read( bytes )) > 0) {
+                    read += localRead;
+                }
             }
             return read;
         }
