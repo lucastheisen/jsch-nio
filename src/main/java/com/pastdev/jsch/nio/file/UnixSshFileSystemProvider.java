@@ -49,6 +49,9 @@ import java.util.Map;
 import java.util.Set;
 
 
+import com.jcraft.jsch.ChannelSftp;
+import com.jcraft.jsch.SftpATTRS;
+import com.jcraft.jsch.SftpException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -168,13 +171,83 @@ public class UnixSshFileSystemProvider extends AbstractSshFileSystemProvider {
             }
         }
 
-        StringBuilder commandBuilder = new StringBuilder( unixPath.getFileSystem().getCommand( "mkdir" ) )
-                .append( " " );
-        if ( permissions != null ) {
-            commandBuilder.append( "-m " ).append( toMode( permissions ) );
+        final ChannelSftp sftp;
+        try {
+            sftp = unixPath.getFileSystem().getCommandRunner().getSftpChannel();
+            sftp.connect();
+        } catch (JSchException e) {
+            throw new IOException(e);
         }
-        commandBuilder.append( unixPath.toString() );
-        executeForStdout( unixPath, commandBuilder.toString() );
+
+
+        try {
+            final String abspath = unixPath.toAbsolutePath().toString();
+
+            SftpATTRS stat = null;
+            try {
+                stat = sftp.lstat(abspath);
+            } catch (SftpException e) {
+            }
+
+            if (stat != null && stat.isDir()) {
+                throw new FileAlreadyExistsException("Directory " + unixPath + " already exists");
+            }
+
+            if (stat == null || !stat.isDir()) {
+                try {
+                    sftp.mkdir(abspath);
+                } catch (SftpException e) {
+                    throw new IOException("Could not create directory", e);
+                }
+            }
+
+            if (permissions != null) {
+                try {
+                    sftp.chmod(toInt(permissions), abspath);
+                } catch (SftpException e) {
+                    throw new IOException("Could change permission on created directory", e);
+                }
+            }
+        } finally {
+            sftp.disconnect();
+        }
+    }
+
+    static private int toInt(Set<PosixFilePermission> permissions) {
+        int value = 0;
+        for (PosixFilePermission permission : permissions) {
+            switch (permission) {
+                case OWNER_READ:
+                    value |= 00400;
+                    break;
+                case OWNER_WRITE:
+                    value |= 00200;
+                    break;
+                case OWNER_EXECUTE:
+                    value |= 00100;
+                    break;
+                case GROUP_READ:
+                    value |= 00040;
+                    break;
+                case GROUP_WRITE:
+                    value |= 00020;
+                    break;
+                case GROUP_EXECUTE:
+                    value |= 00010;
+                    break;
+                case OTHERS_READ:
+                    value |= 00004;
+                    break;
+                case OTHERS_WRITE:
+                    value |= 00002;
+                    break;
+                case OTHERS_EXECUTE:
+                    value |= 00001;
+                    break;
+            }
+        }
+
+        return value;
     }
 
     @SuppressWarnings("unchecked")
