@@ -29,7 +29,7 @@ public class UnixSshSeekableByteChannel implements SeekableByteChannel {
     public UnixSshSeekableByteChannel( UnixSshPath path, Set<? extends OpenOption> openOptions, FileAttribute<?>... createFileAttributes ) throws IOException {
         this.path = path.toAbsolutePath();
         this.append = openOptions.contains( StandardOpenOption.APPEND );
-        this.readable = openOptions.contains( StandardOpenOption.READ );
+        this.readable = openOptions.isEmpty() || openOptions.contains( StandardOpenOption.READ );
         this.writeable = openOptions.contains( StandardOpenOption.WRITE );
 
         this.provider = path.getFileSystem().provider();
