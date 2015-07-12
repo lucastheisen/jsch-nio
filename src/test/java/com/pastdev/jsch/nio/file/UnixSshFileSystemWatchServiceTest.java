@@ -33,7 +33,7 @@ import org.slf4j.LoggerFactory;
 import com.pastdev.jsch.IOUtils;
 
 
-public class UnixSshFileSystemWatchServiceTest extends UnixSshFileSystemTestUtils {
+public class UnixSshFileSystemWatchServiceTest extends FileSystemTestUtils {
     private static Logger logger = LoggerFactory.getLogger( UnixSshFileSystemWatchServiceTest.class );
 
     @AfterClass
@@ -49,7 +49,7 @@ public class UnixSshFileSystemWatchServiceTest extends UnixSshFileSystemTestUtil
     @BeforeClass
     public static void beforeClass() {
         try {
-            initializeFileSystem();
+            initializeFileSystem( UnixSshFileSystemProvider.SCHEME_SSH_UNIX );
         }
         catch ( AssumptionViolatedException e ) {
             Assume.assumeNoException( e );

@@ -1,6 +1,7 @@
 package com.pastdev.jsch.nio.file;
 
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 
 
@@ -9,6 +10,7 @@ import java.io.InputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.charset.Charset;
+import java.nio.file.FileSystem;
 import java.nio.file.FileSystems;
 import java.util.HashMap;
 import java.util.Map;
@@ -25,7 +27,7 @@ import com.pastdev.jsch.DefaultSessionFactory;
 import com.pastdev.jsch.IOUtils;
 
 
-public class UnixSshFileSystemTestUtils {
+public class FileSystemTestUtils {
     private static Logger logger = LoggerFactory.getLogger( UnixSshFileSystemWatchServiceTest.class );
     protected static String filesystemPath;
     protected static String hostname;
@@ -47,7 +49,7 @@ public class UnixSshFileSystemTestUtils {
         }
     }
 
-    public static void initializeFileSystem() {
+    public static void initializeFileSystem( String scheme ) {
         InputStream inputStream = null;
         try {
             inputStream = ClassLoader.getSystemResourceAsStream( "configuration.properties" );
@@ -96,8 +98,9 @@ public class UnixSshFileSystemTestUtils {
             defaultSessionFactory.setIdentityFromPrivateKey( privateKey );
             environment.put( "defaultSessionFactory", defaultSessionFactory );
 
-            uri = new URI( "ssh.unix://" + username + "@" + hostname + ":" + port + sshPath );
-            FileSystems.newFileSystem( uri, environment );
+            uri = new URI( scheme + "://" + username + "@" + hostname + ":" + port + sshPath );
+            FileSystem fileSystem = FileSystems.newFileSystem( uri, environment );
+            assertEquals( scheme.toLowerCase(), fileSystem.provider().getScheme().toLowerCase() );
         }
         catch ( JSchException e ) {
             Assume.assumeNoException( e );

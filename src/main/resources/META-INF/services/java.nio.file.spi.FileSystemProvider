@@ -1,1 +1,2 @@
 com.pastdev.jsch.nio.file.UnixSshFileSystemProvider
+com.pastdev.jsch.nio.file.UnixSshSftpHybridFileSystemProvider

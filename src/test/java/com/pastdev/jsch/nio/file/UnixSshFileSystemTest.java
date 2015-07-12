@@ -48,7 +48,7 @@ import org.slf4j.LoggerFactory;
 import com.pastdev.jsch.IOUtils;
 
 
-public class UnixSshFileSystemTest extends UnixSshFileSystemTestUtils {
+public class UnixSshFileSystemTest extends FileSystemTestUtils {
     private static Logger logger = LoggerFactory.getLogger( UnixSshFileSystemTest.class );
     private static final String expected = "Lets give em something to talk about.";
 
@@ -59,7 +59,7 @@ public class UnixSshFileSystemTest extends UnixSshFileSystemTestUtils {
 
     @BeforeClass
     public static void beforeClass() {
-        initializeFileSystem();
+        initializeFileSystem( UnixSshFileSystemProvider.SCHEME_SSH_UNIX );
     }
 
     @Test
@@ -168,6 +168,8 @@ public class UnixSshFileSystemTest extends UnixSshFileSystemTestUtils {
 
         File rootDir = new File( filesystemPath, root );
         File file = new File( rootDir, filename );
+        FileSystem fileSystem = FileSystems.getFileSystem( uri );
+        Path rootPath = fileSystem.getPath( root );
         Path path = FileSystems.getFileSystem( uri ).getPath( root ).resolve( filename );
         try {
             logger.debug( "making dir {}", rootDir );

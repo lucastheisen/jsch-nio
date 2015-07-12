@@ -78,6 +78,7 @@ public class UnixSshFileSystemProvider extends AbstractSshFileSystemProvider {
             SupportedAttribute.permissions,
             SupportedAttribute.owner,
             SupportedAttribute.group };
+    public static final String SCHEME_SSH_UNIX = "ssh.unix";
     private static final SimpleDateFormat TOUCH_DATE_FORMAT = new SimpleDateFormat( "yyyyMMddHHmm.ss" );
 
     private Map<URI, UnixSshFileSystem> fileSystemMap;
@@ -299,7 +300,7 @@ public class UnixSshFileSystemProvider extends AbstractSshFileSystemProvider {
 
     @Override
     public String getScheme() {
-        return "ssh.unix";
+        return SCHEME_SSH_UNIX;
     }
 
     @Override
