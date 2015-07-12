@@ -1,7 +1,6 @@
 package com.pastdev.jsch.nio.file;
 
 
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.NonReadableChannelException;
