@@ -168,8 +168,6 @@ public class UnixSshFileSystemTest extends FileSystemTestUtils {
 
         File rootDir = new File( filesystemPath, root );
         File file = new File( rootDir, filename );
-        FileSystem fileSystem = FileSystems.getFileSystem( uri );
-        Path rootPath = fileSystem.getPath( root );
         Path path = FileSystems.getFileSystem( uri ).getPath( root ).resolve( filename );
         try {
             logger.debug( "making dir {}", rootDir );
