@@ -42,44 +42,39 @@ public abstract class AbstractSshFileSystem extends FileSystem {
 
         String binDirKey = "dir.bin";
         if ( environment.containsKey( binDirKey ) ) {
-            binDir = (String)environment.get( binDirKey );
+            binDir = (String) environment.get( binDirKey );
         }
 
-        try {
-            // Construct a new sessionFactory from the URI authority, path, and
-            // optional environment proxy
-            SessionFactory defaultSessionFactory = (SessionFactory)environment.get( "defaultSessionFactory" );
-            if ( defaultSessionFactory == null ) {
-                throw new IllegalArgumentException( "defaultSessionFactory environment parameter is required" );
-            }
-            SessionFactoryBuilder builder = defaultSessionFactory.newSessionFactoryBuilder();
-            String username = uri.getUserInfo();
-            if ( username != null ) {
-                builder.setUsername( username );
-            }
-            String hostname = uri.getHost();
-            if ( hostname != null ) {
-                builder.setHostname( hostname );
-            }
-            int port = uri.getPort();
-            if ( port != -1 ) {
-                builder.setPort( port );
-            }
-            Proxy proxy = (Proxy)environment.get( "proxy" );
-            if ( proxy != null ) {
-                builder.setProxy( proxy );
-            }
-            this.commandRunner = new CommandRunner( builder.build() );
+        // Construct a new sessionFactory from the URI authority, path, and
+        // optional environment proxy
+        SessionFactory defaultSessionFactory = (SessionFactory) environment.get( "defaultSessionFactory" );
+        if ( defaultSessionFactory == null ) {
+            throw new IllegalArgumentException( "defaultSessionFactory environment parameter is required" );
         }
-        catch ( JSchException e ) {
-            throw new IOException( e );
+        SessionFactoryBuilder builder = defaultSessionFactory.newSessionFactoryBuilder();
+        String username = uri.getUserInfo();
+        if ( username != null ) {
+            builder.setUsername( username );
         }
+        String hostname = uri.getHost();
+        if ( hostname != null ) {
+            builder.setHostname( hostname );
+        }
+        int port = uri.getPort();
+        if ( port != -1 ) {
+            builder.setPort( port );
+        }
+        Proxy proxy = (Proxy) environment.get( "proxy" );
+        if ( proxy != null ) {
+            builder.setProxy( proxy );
+        }
+        this.commandRunner = new CommandRunner( builder.build() );
     }
 
     String getCommand( String command ) {
         String commandKey = "command." + command;
         if ( environment.containsKey( commandKey ) ) {
-            return (String)environment.get( commandKey );
+            return (String) environment.get( commandKey );
         }
         else if ( binDir != null ) {
             return binDir + PATH_SEPARATOR + command;
@@ -90,26 +85,28 @@ public abstract class AbstractSshFileSystem extends FileSystem {
     }
 
     Variant defaultVariant;
-    public Variant getVariant(String command) {
+
+    public Variant getVariant( String command ) {
         String variantKey = "variant." + command;
         if ( environment.containsKey( variantKey ) ) {
-            return (Variant)environment.get( variantKey );
+            return (Variant) environment.get( variantKey );
         }
 
         // Get the host type
-        if (defaultVariant == null) {
+        if ( defaultVariant == null ) {
             final CommandRunner.ExecuteResult execute;
             try {
-                execute = commandRunner.execute("uname -s");
-            } catch (JSchException | IOException e) {
+                execute = commandRunner.execute( "uname -s" );
+            }
+            catch ( JSchException | IOException e ) {
                 return Variant.GNU;
             }
 
-            if (execute.getExitCode() != 0) {
+            if ( execute.getExitCode() != 0 ) {
                 return Variant.GNU;
             }
 
-            switch(execute.getStdout().trim().toLowerCase()) {
+            switch ( execute.getStdout().trim().toLowerCase() ) {
                 case "darwin":
                     defaultVariant = Variant.BSD;
                     break;
@@ -128,7 +125,7 @@ public abstract class AbstractSshFileSystem extends FileSystem {
     }
 
     public Object getFromEnvironment( String key ) {
-        return environment.get(key);
+        return environment.get( key );
     }
 
     public Long getLongFromEnvironment( String key ) {
@@ -137,31 +134,31 @@ public abstract class AbstractSshFileSystem extends FileSystem {
             return null;
         }
         if ( value instanceof Long ) {
-            return (long)value;
+            return (long) value;
         }
-        return Long.parseLong(value.toString());
+        return Long.parseLong( value.toString() );
     }
-    
+
     public String getStringFromEnvironment( String key ) {
         Object value = environment.get( key );
         if ( value == null ) {
             return null;
         }
         if ( value instanceof String ) {
-            return (String)value;
+            return (String) value;
         }
         return value.toString();
     }
-    
+
     public TimeUnit getTimeUnitFromEnvironment( String key ) {
         Object value = environment.get( key );
         if ( value == null ) {
             return null;
         }
         if ( value instanceof TimeUnit ) {
-            return (TimeUnit)value;
+            return (TimeUnit) value;
         }
-        return TimeUnit.valueOf(value.toString().toUpperCase());
+        return TimeUnit.valueOf( value.toString().toUpperCase() );
     }
 
     public URI getUri() {
