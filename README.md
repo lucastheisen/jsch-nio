@@ -57,5 +57,5 @@ For all of you who want to use this library in a groovy app, the `GroovyClassLoa
 
     println( "File contains:\n*********************\n${fileContents}\n*********************" )
 
-The important part here is that you _may_ need to use the `FileSystems.newFileSystem` overload that allows you to specify the `ClassLoader`.  You may also notice that I left out the `DefaultSessionFactory` environment configuration.  This is because the default `DefaultSessionFactory` has some really sound _defaults_.  You can check the javadoc to see what they are...
+The important part here is that you _may_ need to use the `FileSystems.newFileSystem` overload that allows you to specify the `ClassLoader`.  You may also notice that I left out the `DefaultSessionFactory` environment configuration.  This configuration became optional as of release 0.1.7 because the default `DefaultSessionFactory` has some really sound _defaults_.  You can check the javadoc to see what they are...
 
