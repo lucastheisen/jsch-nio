@@ -31,6 +31,19 @@ Then register and use the new FileSystem:
 
 There is a lot more it can do, so take a look at the unit tests for more examples.
 
+# New in Version 0.1.7
+The requirement to specify the `defaultSessionFactory` in the environment has been removed.  You can now grab your `FileSystem` like this:
+
+    try (FileSystem sshfs = FileSystems.newFileSystem( 
+        new URI( "ssh.unix://" + hostname + "/home/joe", Collections.EMPTY_MAP )) {
+        Path path = sshfs.getPath( "afile" ); // refers to /home/joe/afile
+        try (InputStream inputStream = path.getFileSystem().provider().newInputStream( path )) {
+            // do something with inputStream...
+        }
+    }
+    
+This is due to the fact that `DefaultSessionFactory` has some fine defaults.  Specifically, the username, port, known hosts, and identity values.  For the details on how they are set, see the javadoc.  Furthermore, the username, hostname, and port can all be overridden by the `URI` used in the `FileSystems.newFileSystem` method.
+
 # Groovy Example
 For all of you who want to use this library in a groovy app, the `GroovyClassLoader` may make things _slightly_ more difficult.  To that end, here is a fully working example:
 
@@ -57,5 +70,5 @@ For all of you who want to use this library in a groovy app, the `GroovyClassLoa
 
     println( "File contains:\n*********************\n${fileContents}\n*********************" )
 
-The important part here is that you _may_ need to use the `FileSystems.newFileSystem` overload that allows you to specify the `ClassLoader`.  You may also notice that I left out the `DefaultSessionFactory` environment configuration.  This configuration became optional as of release 0.1.7 because the default `DefaultSessionFactory` has some really sound _defaults_.  You can check the javadoc to see what they are...
+The important part here is that you _may_ need to use the `FileSystems.newFileSystem` overload that allows you to specify the `ClassLoader`.  You may also notice that I left out the `DefaultSessionFactory` environment configuration per the new behavior as of [version 0.1.7](#new-in-version-017)
 
