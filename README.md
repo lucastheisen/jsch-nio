@@ -30,3 +30,32 @@ Then register and use the new FileSystem:
     }
 
 There is a lot more it can do, so take a look at the unit tests for more examples.
+
+# Groovy Example
+For all of you who want to use this library in a groovy app, the `GroovyClassLoader` may make things _slightly_ more difficult.  To that end, here is a fully working example:
+
+    @Grab(group='com.pastdev', module='jsch-nio', version='0.1.7')
+
+    import java.nio.file.FileSystems
+
+    def username = System.getProperty( 'user.name' )
+    def hostname = 'localhost'
+
+    def fileContents = new StringBuilder()
+    def uri = new URI( "ssh.unix://${username}@${hostname}/home/${username}" )
+    FileSystems.newFileSystem( uri, [:], getClass().getClassLoader() )
+            .withCloseable { sshfs ->
+                def path = sshfs.getPath( "afile" )
+                new InputStreamReader( path.getFileSystem().provider().newInputStream( path ) )
+                        .withCloseable { reader ->
+                            def read = null
+                            while ( (read = reader.readLine()) != null ) {
+                                fileContents.append( read )
+                            }
+                        }
+            }
+
+    println( "File contains:\n*********************\n${fileContents}\n*********************" )
+
+The important part here is that you _may_ need to use the `FileSystems.newFileSystem` overload that allows you to specify the `ClassLoader`.  You may also notice that I left out the `DefaultSessionFactory` environment configuration.  This is because the default `DefaultSessionFactory` has some really sound _defaults_.  You can check the javadoc to see what they are...
+
