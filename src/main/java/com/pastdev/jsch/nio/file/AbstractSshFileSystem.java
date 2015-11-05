@@ -16,6 +16,7 @@ import java.util.concurrent.TimeUnit;
 
 import com.jcraft.jsch.JSchException;
 import com.jcraft.jsch.Proxy;
+import com.pastdev.jsch.DefaultSessionFactory;
 import com.pastdev.jsch.SessionFactory;
 import com.pastdev.jsch.SessionFactory.SessionFactoryBuilder;
 import com.pastdev.jsch.command.CommandRunner;
@@ -49,7 +50,7 @@ public abstract class AbstractSshFileSystem extends FileSystem {
         // optional environment proxy
         SessionFactory defaultSessionFactory = (SessionFactory) environment.get( "defaultSessionFactory" );
         if ( defaultSessionFactory == null ) {
-            throw new IllegalArgumentException( "defaultSessionFactory environment parameter is required" );
+            defaultSessionFactory = new DefaultSessionFactory();
         }
         SessionFactoryBuilder builder = defaultSessionFactory.newSessionFactoryBuilder();
         String username = uri.getUserInfo();
