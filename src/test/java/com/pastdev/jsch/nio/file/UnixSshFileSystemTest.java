@@ -63,6 +63,60 @@ public class UnixSshFileSystemTest extends FileSystemTestUtils {
     }
 
     @Test
+    public void testDirectoryStreamEmptyDir() throws IOException {
+        final String root = UUID.randomUUID().toString();
+        Path rootPath = Paths.get( filesystemPath, root );
+
+        // create test dir
+        assertFalse( Files.exists( rootPath ) );
+        Files.createDirectories( rootPath );
+        assertTrue( Files.exists( rootPath ) );
+        assertTrue( Files.isDirectory( rootPath ) );
+
+        // test dirstream
+        DirectoryStream<Path> ds = Files.newDirectoryStream(
+                FileSystems.getFileSystem( uri ).getPath( root ) );
+        try {
+            Iterator<Path> iter = ds.iterator();
+            assertFalse( iter.hasNext() );
+            try {
+                iter.next();
+                fail( "expected an exception" );
+            }
+            catch ( NoSuchElementException e ) {
+                // pass
+            }
+        }
+        finally {
+            ds.close();
+        }
+    }
+
+    @Test
+    public void testExists() {
+        Path defaultPath = Paths.get( uri );
+        assertTrue( Files.exists( defaultPath ) );
+        assertTrue( Files.isDirectory( defaultPath ) );
+        assertEquals( sshPath, defaultPath.toString() );
+        Path rootPath = defaultPath.resolve( "/" );
+        assertTrue( Files.exists( rootPath ) );
+        assertTrue( Files.isDirectory( defaultPath ) );
+        assertEquals( "/", rootPath.toString() );
+    }
+
+    @Test
+    public void testGetPath() {
+        FileSystem fileSystem = FileSystems.getFileSystem( uri );
+        assertTrue( UnixSshFileSystem.class.isAssignableFrom( fileSystem.getClass() ) );
+        assertEquals( "/", fileSystem.getPath( "/" ).toString() );
+        assertEquals( "/", fileSystem.getPath( "/" ).toAbsolutePath().toString() );
+        assertEquals( "aaa", fileSystem.getPath( "aaa" ).toString() );
+        assertEquals( sshPath + "/aaa", fileSystem.getPath( "aaa" ).toAbsolutePath().toString() );
+        assertEquals( "/aaa", fileSystem.getPath( "/aaa" ).toString() );
+        assertEquals( "/aaa", fileSystem.getPath( "/aaa" ).toAbsolutePath().toString() );
+    }
+
+    @Test
     public void testNewDirectoryStream() {
         final String root = UUID.randomUUID().toString();
         final String filename1 = "silly1.txt";
@@ -424,35 +478,5 @@ public class UnixSshFileSystemTest extends FileSystemTestUtils {
         assertEquals( hostname, path.getHostname() );
         assertEquals( port, path.getPort() );
         assertEquals( sshPath + PATH_SEPARATOR + filename, path.toString() );
-    }
-
-    @Test
-    public void testDirectoryStreamEmptyDir() throws IOException {
-        final String root = UUID.randomUUID().toString();
-        Path rootPath = Paths.get( filesystemPath, root );
-
-        // create test dir
-        assertFalse( Files.exists( rootPath ) );
-        Files.createDirectories( rootPath );
-        assertTrue( Files.exists( rootPath ) );
-        assertTrue( Files.isDirectory( rootPath ) );
-
-        // test dirstream
-        DirectoryStream<Path> ds = Files.newDirectoryStream(
-                FileSystems.getFileSystem( uri ).getPath( root ) );
-        try {
-            Iterator<Path> iter = ds.iterator();
-            assertFalse( iter.hasNext() );
-            try {
-                iter.next();
-                fail( "expected an exception" );
-            }
-            catch ( NoSuchElementException e ) {
-                // pass
-            }
-        }
-        finally {
-            ds.close();
-        }
     }
 }
