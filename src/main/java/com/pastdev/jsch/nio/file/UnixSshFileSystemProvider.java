@@ -161,7 +161,7 @@ public class UnixSshFileSystemProvider extends AbstractSshFileSystemProvider {
     @Override
     @SuppressWarnings("unchecked")
     public void createDirectory( Path path, FileAttribute<?>... fileAttributes ) throws IOException {
-        UnixSshPath unixPath = checkPath( path );
+        UnixSshPath unixPath = checkPath( path ).toAbsolutePath();
         Set<PosixFilePermission> permissions = null;
         for ( FileAttribute<?> fileAttribute : fileAttributes ) {
             if ( fileAttribute.name().equals( "posix:permissions" ) ) {
