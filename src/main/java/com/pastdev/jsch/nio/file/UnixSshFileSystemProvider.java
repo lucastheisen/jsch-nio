@@ -894,7 +894,13 @@ public class UnixSshFileSystemProvider extends AbstractSshFileSystemProvider {
                 return Long.parseLong( value );
             }
             if ( valueClass == FileTime.class ) {
-                return FileTime.fromMillis( Long.parseLong( value ) * 1000 );
+                long seconds = 0;
+                try {
+                    seconds = Long.parseLong( value );
+                } catch ( NumberFormatException e ) {
+                    //Do nothing. Some stat versions don't support creation date and potentionally other times.
+                }
+                return FileTime.fromMillis( seconds * 1000 );
             }
 
             return value;
