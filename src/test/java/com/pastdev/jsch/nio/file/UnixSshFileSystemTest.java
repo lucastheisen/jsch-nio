@@ -63,6 +63,34 @@ public class UnixSshFileSystemTest extends FileSystemTestUtils {
     }
 
     @Test
+    public void testCreateDirectory() {
+        String root = UUID.randomUUID().toString();
+        String dir = "testcreatdir";
+
+        File rootDir = new File( filesystemPath, root );
+        Path path = FileSystems.getFileSystem( uri ).getPath( root ).resolve( dir );
+        try {
+            logger.debug( "making root dir {}", rootDir );
+            rootDir.mkdirs();
+
+            logger.trace( "creating subdirectory {}", path );
+            path.getFileSystem().provider().createDirectory( path );
+            logger.trace( "created" );
+
+            assertTrue( Files.isDirectory( Paths.get( rootDir.getAbsolutePath(), dir ) ) );
+        }
+        catch ( IOException e ) {
+            logger.error( "failed for {}: {}", path, e );
+            logger.debug( "failed:", e );
+            fail( "failed for " + path + ": " + e.getMessage() );
+        }
+        finally {
+            logger.trace( "deleting [{}]", rootDir );
+            IOUtils.deleteFiles( new File( rootDir, dir ), rootDir );
+        }
+    }
+
+    @Test
     public void testDirectoryStreamEmptyDir() throws IOException {
         final String root = UUID.randomUUID().toString();
         Path rootPath = Paths.get( filesystemPath, root );
