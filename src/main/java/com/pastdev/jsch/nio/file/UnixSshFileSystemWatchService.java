@@ -32,15 +32,13 @@ public class UnixSshFileSystemWatchService implements WatchService {
     private volatile boolean closed;
     private final ExecutorService executorService;
     private final LinkedBlockingDeque<WatchKey> pendingKeys;
+    private boolean useINotifyWatchKey = false;
     private final Map<UnixSshPath, Future<?>> watchKeyFutures;
     private final Map<UnixSshPath, UnixSshPathWatchKey> watchKeys;
     private final Lock watchKeysLock;
 
-    public UnixSshFileSystemWatchService( Long pollingInterval, TimeUnit pollingIntervalTimeUnit ) {
+    private UnixSshFileSystemWatchService() {
         logger.debug( "creating new watch service polling every {} {}", pollingInterval, pollingIntervalTimeUnit );
-        this.pollingInterval = pollingInterval == null ? DEFAULT_POLLING_INTERVAL : pollingInterval;
-        this.pollingIntervalTimeUnit = pollingIntervalTimeUnit == null
-                ? DEFAULT_POLLING_INTERVAL_TIME_UNIT : pollingIntervalTimeUnit;
         this.pendingKeys = new LinkedBlockingDeque<>();
         this.executorService = Executors.newCachedThreadPool();
         this.watchKeys = new HashMap<>();
@@ -67,6 +65,18 @@ public class UnixSshFileSystemWatchService implements WatchService {
         if ( closed ) throw new ClosedWatchServiceException();
     }
 
+    public static WatchService inotifyWatchService() {
+        UnixSshFileSystemWatchService service = new UnixSshFileSystemWatchService();
+        service.useINotifyWatchKey = true;
+        return service;
+    }
+    
+    private UnixSshPathWatchKey newWatchKey( UnixSshPath path, Kind<?>[] events ) {
+        return useINotifyWatchKey 
+                ? new UnixSshPathINotifyWatchKey( this, path, events )
+                : new UnixSshPathWatchKey( this, path, events, pollingInterval, pollingIntervalTimeUnit );
+    }
+
     @Override
     public WatchKey poll() {
         ensureOpen();
@@ -78,6 +88,14 @@ public class UnixSshFileSystemWatchService implements WatchService {
         ensureOpen();
         return pendingKeys.poll( timeout, unit );
     }
+    
+    public static UnixSshFileSystemWatchService pollingWatchService( Long pollingInterval, TimeUnit pollingIntervalTimeUnit ) {
+        UnixSshFileSystemWatchService service = new UnixSshFileSystemWatchService();
+        service.pollingInterval = pollingInterval == null ? DEFAULT_POLLING_INTERVAL : pollingInterval;
+        service.pollingIntervalTimeUnit = pollingIntervalTimeUnit == null
+                ? DEFAULT_POLLING_INTERVAL_TIME_UNIT : pollingIntervalTimeUnit;
+        return service;
+    }
 
     UnixSshPathWatchKey register( UnixSshPath path, Kind<?>[] events, Modifier... modifiers ) {
         try {
@@ -86,7 +104,7 @@ public class UnixSshFileSystemWatchService implements WatchService {
                 return watchKeys.get( path );
             }
 
-            UnixSshPathWatchKey watchKey = new UnixSshPathWatchKey( this, path, events, pollingInterval, pollingIntervalTimeUnit );
+            UnixSshPathWatchKey watchKey = newWatchKey( path, events );
             watchKeys.put( path, watchKey );
             watchKeyFutures.put( path, executorService.submit( watchKey ) );
             return watchKey;

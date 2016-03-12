@@ -125,6 +125,17 @@ public abstract class AbstractSshFileSystem extends FileSystem {
         return commandRunner;
     }
 
+    public boolean getBooleanFromEnvironment( String key ) {
+        Object value = environment.get( key );
+        if ( value == null ) {
+            return false;
+        }
+        if ( value instanceof Boolean ) {
+            return (boolean) value;
+        }
+        return Boolean.parseBoolean( value.toString() );
+    }
+
     public Object getFromEnvironment( String key ) {
         return environment.get( key );
     }
@@ -135,7 +146,7 @@ public abstract class AbstractSshFileSystem extends FileSystem {
             return null;
         }
         if ( value instanceof Long ) {
-            return (long) value;
+            return (Long) value;
         }
         return Long.parseLong( value.toString() );
     }

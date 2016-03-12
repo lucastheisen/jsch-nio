@@ -261,10 +261,16 @@ public class UnixSshFileSystem extends AbstractSshFileSystem {
 
     @Override
     public WatchService newWatchService() throws IOException {
-        // TODO make sure these values are set in environment, or get good
-        // defaults
-        return new UnixSshFileSystemWatchService( getLongFromEnvironment( "watchservice.polling.interval" ),
-                getTimeUnitFromEnvironment( "watchservice.polling.timeunit" ) );
+        if ( getBooleanFromEnvironment( "watchservice.inotify" ) ) {
+            return UnixSshFileSystemWatchService.inotifyWatchService();
+        }
+        else {
+            // TODO make sure these values are set in environment, or get good
+            // defaults
+            return UnixSshFileSystemWatchService.pollingWatchService(
+                    getLongFromEnvironment( "watchservice.polling.interval" ),
+                    getTimeUnitFromEnvironment( "watchservice.polling.timeunit" ) );
+        }
     }
 
     @Override

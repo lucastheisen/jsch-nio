@@ -50,6 +50,10 @@ public class FileSystemTestUtils {
     }
 
     public static void initializeFileSystem( String scheme ) {
+        initializeFileSystem( scheme, "ssh" );
+    }
+
+    public static void initializeFileSystem( String scheme, String prefix ) {
         InputStream inputStream = null;
         try {
             inputStream = ClassLoader.getSystemResourceAsStream( "configuration.properties" );
@@ -73,18 +77,16 @@ public class FileSystemTestUtils {
             }
         }
 
-        String knownHosts = properties.getProperty( "ssh.knownHosts" );
-        String privateKey = properties.getProperty( "ssh.privateKey" );
-        username = properties.getProperty( "ssh.username" );
-        hostname = "localhost";
-        String portString = properties.getProperty( "ssh.port" );
-        port = portString == null ? 22 : Integer.parseInt( portString );
-
-        sshPath = properties.getProperty( "ssh.test.sshPath" );
-        filesystemPath = properties.getProperty( "ssh.test.filesystemPath" );
+        String knownHosts = properties.getProperty( prefix + ".knownHosts" );
+        String privateKey = properties.getProperty( prefix + ".privateKey" );
+        username = properties.getProperty( prefix + ".username" );
+        hostname = properties.getProperty( prefix + ".hostname", "localhost" );
+        port = Integer.parseInt( properties.getProperty( prefix + ".port", "22" ) );
+        sshPath = properties.getProperty( prefix + ".test.sshPath" );
+        filesystemPath = properties.getProperty( prefix + ".test.filesystemPath" );
 
         Map<String, Object> environment = new HashMap<String, Object>();
-        String environmentPrefix = "ssh.environment.";
+        String environmentPrefix = prefix + ".environment.";
         for ( Object keyObject : properties.keySet() ) {
             String key = (String)keyObject;
             if ( key.startsWith( environmentPrefix ) ) {

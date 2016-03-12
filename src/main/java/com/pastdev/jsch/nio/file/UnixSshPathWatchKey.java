@@ -31,8 +31,8 @@ public class UnixSshPathWatchKey implements WatchKey, Runnable {
     private Map<UnixSshPath, UnixSshPathWatchEvent<Path>> addMap;
     private boolean cancelled;
     private Map<UnixSshPath, UnixSshPathWatchEvent<Path>> deleteMap;
-    private UnixSshPath dir;
-    private Map<UnixSshPath, PosixFileAttributes> entries;
+    UnixSshPath dir;
+    Map<UnixSshPath, PosixFileAttributes> entries;
     private boolean initialized;
     private Set<Kind<?>> kindsToWatch;
     private Map<UnixSshPath, UnixSshPathWatchEvent<Path>> modifyMap;
@@ -43,7 +43,7 @@ public class UnixSshPathWatchKey implements WatchKey, Runnable {
 
     private ReentrantLock mapLock = new ReentrantLock();
     private ReentrantLock stateLock = new ReentrantLock();
-    private ReentrantLock pollerLock = new ReentrantLock();
+    ReentrantLock pollerLock = new ReentrantLock();
     private Condition initializationComplete = pollerLock.newCondition();
     private Condition runImmediately = pollerLock.newCondition();
 
