@@ -72,3 +72,13 @@ For all of you who want to use this library in a groovy app, the `GroovyClassLoa
 
 The important part here is that you _may_ need to use the `FileSystems.newFileSystem` overload that allows you to specify the `ClassLoader`.  You may also notice that I left out the `DefaultSessionFactory` environment configuration per the new behavior as of [version 0.1.7](#new-in-version-017)
 
+# New in Version 1.0.2
+
+The constructor for `UnixSshFileSystemWatchService` was removed in favor of factory methods that offer more flexibility to the `UnixSshFileSystem`.  This required a major version change due to the minor backwards incompatibility that _should_ not have been used anyway (a watch service should be obtained from the `FileSystem`, not constructed).  This was done to add support for an [inotify](https://en.wikipedia.org/wiki/Inotify) enabled watch service.  With this new feature, events are fired by the remote operating system rather than polling for changes.  This should _drastically_ improve performance in some cases.  Specifically when the folder being watched has a large number of files/folders in it.  In order to use this new feature, the remote system will have to have the `inotifywait` command available (part of the `inotify-tools` package).  To enable it, you supply the `watchservice.inotify` property with a value of `true` to the registration:
+
+    Map<String, Object> environment = new HashMap<String, Object>();
+    environment.put( "defaultSessionFactory", defaultSessionFactory );
+    environment.put( "watchservice.inotify", true );
+    uri = new URI( scheme + "://" + username + "@" + hostname + ":" + port + sshPath );
+    FileSystem fileSystem = FileSystems.newFileSystem( uri, environment );
+
