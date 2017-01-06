@@ -30,6 +30,7 @@ import com.pastdev.jsch.IOUtils;
 public class FileSystemTestUtils {
     private static Logger logger = LoggerFactory.getLogger( UnixSshFileSystemWatchServiceTest.class );
     protected static String filesystemPath;
+    protected static boolean fileSystemInitialized = false;
     protected static String hostname;
     protected static int port;
     protected static Properties properties;
@@ -44,9 +45,12 @@ public class FileSystemTestUtils {
     }
 
     public static void closeFileSystem() {
-        if ( uri != null ) {
-            IOUtils.closeAndLogException( FileSystems.getFileSystem( uri ) );
+        if (fileSystemInitialized) {
+            if ( uri != null ) {
+                IOUtils.closeAndLogException( FileSystems.getFileSystem( uri ) );
+            }
         }
+        fileSystemInitialized = false;
     }
 
     public static void initializeFileSystem( String scheme ) {
@@ -84,6 +88,8 @@ public class FileSystemTestUtils {
         port = Integer.parseInt( properties.getProperty( prefix + ".port", "22" ) );
         sshPath = properties.getProperty( prefix + ".test.sshPath" );
         filesystemPath = properties.getProperty( prefix + ".test.filesystemPath" );
+        
+        Assume.assumeNotNull( username );
 
         Map<String, Object> environment = new HashMap<String, Object>();
         String environmentPrefix = prefix + ".environment.";
@@ -102,6 +108,7 @@ public class FileSystemTestUtils {
 
             uri = new URI( scheme + "://" + username + "@" + hostname + ":" + port + sshPath );
             FileSystem fileSystem = FileSystems.newFileSystem( uri, environment );
+            fileSystemInitialized = true;
             assertEquals( scheme.toLowerCase(), fileSystem.provider().getScheme().toLowerCase() );
         }
         catch ( JSchException e ) {

@@ -1,8 +1,7 @@
-# Yes, i use winblows, i know, not really ideal...  however, 
-# i like having drivers that work
 ssh.knownHosts=C:/Cygwin/home/ltheisen/.ssh/known_hosts
 ssh.privateKey=C:/Cygwin/home/ltheisen/.ssh/id_dsa
-scp.out.test.scpPath=/tmp
-scp.out.test.filesystemPath=C:/Cygwin/tmp
-scp.out.test.username=ltheisen
-scp.out.test.port=22
+ssh.username=ltheisen
+#ssh.hostname=localhost
+#ssh.port=22
+ssh.test.sshPath=/tmp
+ssh.test.filesystemPath=C:/Cygwin/tmp
