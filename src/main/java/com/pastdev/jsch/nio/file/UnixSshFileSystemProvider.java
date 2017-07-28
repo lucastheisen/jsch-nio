@@ -587,7 +587,7 @@ public class UnixSshFileSystemProvider extends AbstractSshFileSystemProvider {
     void setTimes( UnixSshPath path, FileTime lastModifiedTime, FileTime lastAccessTime ) throws IOException {
         if ( lastModifiedTime != null && lastModifiedTime.equals( lastAccessTime ) ) {
             String command = path.getFileSystem().getCommand( "touch" )
-                    + " -d " + toTouchTime( lastModifiedTime ) 
+                    + " -t " + toTouchTime( lastModifiedTime )
                     + " " + path.toAbsolutePath().quotedString();
             executeForStdout( path, command );
             return;
@@ -595,13 +595,13 @@ public class UnixSshFileSystemProvider extends AbstractSshFileSystemProvider {
 
         if ( lastModifiedTime != null ) {
             String command = path.getFileSystem().getCommand( "touch" )
-                    + " -m -d " + toTouchTime( lastModifiedTime ) 
+                    + " -m -t " + toTouchTime( lastModifiedTime )
                     + " " + path.toAbsolutePath().quotedString();
             executeForStdout( path, command );
         }
         if ( lastAccessTime != null ) {
             String command = path.getFileSystem().getCommand( "touch" )
-                    + " -a -d " + toTouchTime( lastModifiedTime ) 
+                    + " -a -t " + toTouchTime( lastModifiedTime )
                     + " " + path.toAbsolutePath().quotedString();
             executeForStdout( path, command );
         }
