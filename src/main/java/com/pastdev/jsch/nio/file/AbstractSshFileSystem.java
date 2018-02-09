@@ -121,6 +121,10 @@ public abstract class AbstractSshFileSystem extends FileSystem {
         return defaultVariant;
     }
 
+    public void setCommandRunner(CommandRunner commandRunner) {
+        this.commandRunner = commandRunner;
+    }
+
     public CommandRunner getCommandRunner() {
         return commandRunner;
     }
