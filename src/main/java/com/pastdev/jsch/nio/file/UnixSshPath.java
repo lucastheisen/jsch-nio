@@ -150,7 +150,7 @@ public class UnixSshPath extends AbstractSshPath {
     /** {@inheritDoc} */
     @Override
     public UnixSshPath getParent() {
-        if ( parts.length == 0 && !isAbsolute() ) {
+        if ( (parts.length == 0 || parts.length == 1) && !isAbsolute() ) {
             return null;
         }
         if ( parts.length <= 1 ) {
