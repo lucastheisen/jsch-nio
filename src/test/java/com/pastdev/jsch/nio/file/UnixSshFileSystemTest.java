@@ -356,6 +356,10 @@ public class UnixSshFileSystemTest extends FileSystemTestUtils {
         }
         finally {
             IOUtils.deleteFiles( file, rootDir );
+        	try {
+        		// should add wait to delete files to ensure delete is complete... but...
+				Thread.sleep(1000);
+			} catch (InterruptedException e) { }
         }
 
         try {
