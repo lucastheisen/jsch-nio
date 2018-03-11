@@ -8,29 +8,26 @@ services:
 # Need to set perms on bind mount folder:
 #   https://github.com/moby/moby/issues/2259#issuecomment-26564115
 before_install:
-- ssh-keygen -t rsa -b 4096 -f "~/.ssh/id_rsa" -N ''
-- "echo \"localhost $(cat ~/.ssh/id_rsa.pub)\" > ~/.ssh/known_hosts"
-- chmod 600 ~/.ssh/known_hosts
-- ssh -vvv -p 22 travis@localhost echo hello
-#- docker build . -t pastdev/jsch-nio-sshd
-#- mkdir -p /tmp/test/temp
-#- "chown -R $(id -u):$(id -g) /tmp/test"
-#- CONTAINER=$(docker run -d -e "SSH_USER_UID=$(id -u)" -e "SSH_USER_GID=$(id -g)" -p 2222:22 -v /tmp/test:/home/test pastdev/jsch-nio-sshd)
-#- |
-#  RUNNING=0
-#  for i in {1..5}; do 
-#    if (docker exec $CONTAINER ps -o cmd -p 1 --no-header | grep sshd); then
-#      RUNNING=1
-#      break  
-#    fi
-#    sleep 1
-#  done
-#  if [ $RUNNING -eq 0 ]; then exit 1; fi
-#- "echo \"[localhost]:2222 $(docker exec $CONTAINER cat /etc/ssh/ssh_host_rsa_key.pub)\" > ~/.ssh/known_hosts"
-#- docker exec $CONTAINER cat /home/test/.ssh/id_rsa > ~/.ssh/id_rsa
-#- docker exec $CONTAINER cat /home/test/.ssh/id_rsa.pub > ~/.ssh/id_rsa.pub
-#- find ~/.ssh -type f -exec chmod 600 {} +
-#- find ~/.ssh -type d -exec chmod 700 {} +
+- docker build . -t pastdev/jsch-nio-sshd
+- mkdir -p /tmp/test/temp
+- "chown -R $(id -u):$(id -g) /tmp/test"
+- CONTAINER=$(docker run -d -e "SSH_USER_UID=$(id -u)" -e "SSH_USER_GID=$(id -g)" -p 2222:22 -v /tmp/test:/home/test pastdev/jsch-nio-sshd)
+- |
+  RUNNING=0
+  for i in {1..5}; do 
+    if (docker exec $CONTAINER ps -o cmd -p 1 --no-header | grep sshd); then
+      RUNNING=1
+      break  
+    fi
+    sleep 1
+  done
+  if [ $RUNNING -eq 0 ]; then exit 1; fi
+- "echo \"[localhost]:2222 $(docker exec $CONTAINER cat /etc/ssh/ssh_host_rsa_key.pub)\" > ~/.ssh/known_hosts"
+- docker exec $CONTAINER cat /home/test/.ssh/id_rsa > ~/.ssh/id_rsa
+- docker exec $CONTAINER cat /home/test/.ssh/id_rsa.pub > ~/.ssh/id_rsa.pub
+- find ~/.ssh -type f -exec chmod 600 {} +
+- find ~/.ssh -type d -exec chmod 700 {} +
+# For some reason i still cant get ssh to work...
 #- ssh -o "HostKeyAlgorithms=ssh-rsa-cert-v01@openssh.com,ssh-rsa-cert-v00@openssh.com,ssh-rsa" -o "IdentityFile=~/.ssh/id_rsa" -o "UserKnownHostsFile=~/.ssh/known_hosts" -vvv -p 2222 test@localhost echo hello
 #- cp src/test/resources/.travis.configuration.properties src/test/resources/configuration.properties
 
