@@ -16,4 +16,6 @@ RUN set -e; \
     
 COPY .dockerfile/files/ /
 
+RUN chmod 700 /opt/containerland/run.sh
+
 ENTRYPOINT ["/opt/containerland/run.sh"]
