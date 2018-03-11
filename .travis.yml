@@ -27,7 +27,7 @@ before_install:
 - pwd
 - ls -al ~/.ssh/
 - ls -al /tmp/test/.ssh
-- ssh -o "HostKeyAlgorithms=ssh-rsa-cert-v01@openssh.com,ssh-rsa-cert-v00@openssh.com,ssh-rsa" -o "IdentityFile=~/.ssh/id_rsa" -o "UserKnownHostsFile=~/.ssh/known_hosts" -vvv  -vvv test@localhost echo hello
+- ssh -p 2222 -o "HostKeyAlgorithms=ssh-rsa-cert-v01@openssh.com,ssh-rsa-cert-v00@openssh.com,ssh-rsa" -o "IdentityFile=~/.ssh/id_rsa" -o "UserKnownHostsFile=~/.ssh/known_hosts" -vvv  -vvv test@localhost echo hello
 - cp src/test/resources/.travis.configuration.properties src/test/resources/configuration.properties
 
 script: mvn verify -B
