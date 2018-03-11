@@ -1,6 +1,9 @@
 # Vi
 *~
 .*.swp
+
+# VS Code
+.vscode
  
 # Eclipse
 /.project

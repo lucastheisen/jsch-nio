@@ -1,0 +1,30 @@
+sudo: required
+
+language: java
+
+services:
+- docker
+
+before_install:
+- docker build . -t pastdev/jsch-nio-sshd
+- mkdir -p /tmp/test
+- CONTAINER=$(docker run -d -p 2222:22 -v /tmp/test:/home/test pastdev/jsch-nio-sshd)
+- |
+  RUNNING=0
+  for i in {1..5}; do 
+    if (docker exec $CONTAINER ps -o cmd -p 1 --no-header | grep sshd); then
+      RUNNING=1
+      break  
+    fi
+    sleep 1
+  done
+  if [ $RUNNING -eq 0 ]; then exit 1; fi
+- echo "[localhost]:2222 $(docker exec $CONTAINER cat /etc/ssh/ssh_host_rsa_key.pub)" > ~/.ssh/known_hosts
+- docker exec $containerId cat /home/test/.ssh/id_rsa > ~/.ssh/id_rsa
+- pwd
+- cd ~
+- pwd
+- ls -al .ssh/
+- cat .ssh/id_rsa
+- cat .ssh/known_hosts
+- ls -al /tmp/test/
