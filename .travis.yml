@@ -23,7 +23,7 @@ before_install:
   done
   if [ $RUNNING -eq 0 ]; then exit 1; fi
 - "echo \"[localhost]:2222 $(docker exec $CONTAINER cat /etc/ssh/ssh_host_rsa_key.pub)\" > ~/.ssh/known_hosts"
-- docker exec $CONTAINER cat /home/test/.ssh/id_rsa > ~/.ssh/id_rsa
+- docker exec $CONTAINER cat /home/test/.ssh/id_rsa* > ~/.ssh/
 - pwd
 - find ~/.ssh -type f -exec chmod 600 {} +
 - find ~/.ssh -type d -exec chmod 700 {} +
