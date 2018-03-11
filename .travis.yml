@@ -20,6 +20,7 @@ before_install:
   done
   if [ $RUNNING -eq 0 ]; then exit 1; fi
 - "echo \"Running: $RUNNING, Container: $CONTAINER\""
+- docker logs $CONTAINER
 - docker exec $CONTAINER ls -al /home
 - docker exec $CONTAINER ls -al /home/test
 - docker exec $CONTAINER ls -al /home/test/.ssh
