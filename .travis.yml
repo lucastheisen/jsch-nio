@@ -25,14 +25,9 @@ before_install:
 - "echo \"[localhost]:2222 $(docker exec $CONTAINER cat /etc/ssh/ssh_host_rsa_key.pub)\" > ~/.ssh/known_hosts"
 - docker exec $CONTAINER cat /home/test/.ssh/id_rsa > ~/.ssh/id_rsa
 - docker exec $CONTAINER cat /home/test/.ssh/id_rsa.pub > ~/.ssh/id_rsa.pub
-- pwd
 - find ~/.ssh -type f -exec chmod 600 {} +
 - find ~/.ssh -type d -exec chmod 700 {} +
-- ls -al ~/.ssh/
-- ls -al /tmp/test/.ssh
-- ps -aef
-- netstat -ao | grep 2222
-- ssh -p 2222 -o "HostKeyAlgorithms=ssh-rsa-cert-v01@openssh.com,ssh-rsa-cert-v00@openssh.com,ssh-rsa" -o "IdentityFile=~/.ssh/id_rsa" -o "UserKnownHostsFile=~/.ssh/known_hosts" -vvv  -vvv test@localhost echo hello
-- cp src/test/resources/.travis.configuration.properties src/test/resources/configuration.properties
+#- ssh -o "HostKeyAlgorithms=ssh-rsa-cert-v01@openssh.com,ssh-rsa-cert-v00@openssh.com,ssh-rsa" -o "IdentityFile=~/.ssh/id_rsa" -o "UserKnownHostsFile=~/.ssh/known_hosts" -vvv -p 2222 test@localhost echo hello
+#- cp src/test/resources/.travis.configuration.properties src/test/resources/configuration.properties
 
 script: mvn verify -B
