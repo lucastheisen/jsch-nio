@@ -5,9 +5,10 @@ language: java
 services:
 - docker
 
+# Need to set perms on bind mount folder:
+#   https://github.com/moby/moby/issues/2259#issuecomment-26564115
 before_install:
 - docker build . -t pastdev/jsch-nio-sshd
-- id
 - mkdir -p /tmp/test
 - "chown $(id -u):$(id -g) /tmp/test"
 - CONTAINER=$(docker run -d -e "SSH_USER_UID=$(id -u)" -e "SSH_USER_GID=$(id -g)" -p 2222:22 -v /tmp/test:/home/test pastdev/jsch-nio-sshd)
@@ -21,23 +22,7 @@ before_install:
     sleep 1
   done
   if [ $RUNNING -eq 0 ]; then exit 1; fi
-- "echo \"Running: $RUNNING, Container: $CONTAINER\""
-- docker logs $CONTAINER
-- docker exec $CONTAINER ls -al /home
-- docker exec $CONTAINER ls -al /home/test
-- docker exec $CONTAINER ls -al /home/test/.ssh
-- docker exec $CONTAINER cat /home/test/.ssh/id_rsa
-- docker exec $CONTAINER cat /home/test/.ssh/id_rsa.pub
-- docker exec $CONTAINER cat /home/test/.ssh/known_hosts
-- docker exec $CONTAINER cat /home/test/.ssh/authorized_keys
 - "echo \"[localhost]:2222 $(docker exec $CONTAINER cat /etc/ssh/ssh_host_rsa_key.pub)\" > ~/.ssh/known_hosts"
-- cat ~/.ssh/known_hosts
 - docker exec $CONTAINER cat /home/test/.ssh/id_rsa > ~/.ssh/id_rsa
-- cat ~/.ssh/id_rsa
-- pwd
-- cd ~
-- pwd
-- ls -al .ssh/
-- cat .ssh/id_rsa
-- cat .ssh/known_hosts
-- ls -al /tmp/test/
+
+script: mvn verify -B
