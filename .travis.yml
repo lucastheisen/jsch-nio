@@ -9,8 +9,8 @@ services:
 #   https://github.com/moby/moby/issues/2259#issuecomment-26564115
 before_install:
 - docker build . -t pastdev/jsch-nio-sshd
-- mkdir -p /tmp/test
-- "chown $(id -u):$(id -g) /tmp/test"
+- mkdir -p /tmp/test/temp
+- "chown -R $(id -u):$(id -g) /tmp/test"
 - CONTAINER=$(docker run -d -e "SSH_USER_UID=$(id -u)" -e "SSH_USER_GID=$(id -g)" -p 2222:22 -v /tmp/test:/home/test pastdev/jsch-nio-sshd)
 - |
   RUNNING=0
@@ -24,5 +24,6 @@ before_install:
   if [ $RUNNING -eq 0 ]; then exit 1; fi
 - "echo \"[localhost]:2222 $(docker exec $CONTAINER cat /etc/ssh/ssh_host_rsa_key.pub)\" > ~/.ssh/known_hosts"
 - docker exec $CONTAINER cat /home/test/.ssh/id_rsa > ~/.ssh/id_rsa
+- cp src/test/.travis.configuration.properties src/test/configuration.properties
 
 script: mvn verify -B
