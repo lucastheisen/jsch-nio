@@ -7,8 +7,10 @@ services:
 
 before_install:
 - docker build . -t pastdev/jsch-nio-sshd
+- id
 - mkdir -p /tmp/test
-- CONTAINER=$(docker run -d -p 2222:22 -v /tmp/test:/home/test pastdev/jsch-nio-sshd)
+- "chown $(id -u):$(id -g) /tmp/test"
+- CONTAINER=$(docker run -d -e "SSH_USER_UID=$(id -u)" -e "SSH_USER_GID=$(id -g)" -p 2222:22 -v /tmp/test:/home/test pastdev/jsch-nio-sshd)
 - |
   RUNNING=0
   for i in {1..5}; do 

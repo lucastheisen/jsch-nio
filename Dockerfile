@@ -3,8 +3,10 @@ FROM centos:centos7
 # Inspired by https://github.com/CentOS/CentOS-Dockerfiles
 LABEL maintainer="lucastheisen@pastdev.com"
 
-ENV SSH_USERNAME=test
-ENV SSH_PASSWORD=test
+ENV SSH_USER_NAME=test \
+    SSH_USER_UID=1001 \
+    SSH_USER_GID=1001 \
+    SSH_USER_PASSWORD=test
 
 RUN yum -y update; yum clean all
 RUN yum -y install epel-release openssh-server openssh-clients passwd inotify-tools; yum clean all
