@@ -19,6 +19,7 @@ before_install:
     sleep 1
   done
   if [ $RUNNING -eq 0 ]; then exit 1; fi
+- echo "Running: $RUNNING, Container: $CONTAINER"
 - echo "[localhost]:2222 $(docker exec $CONTAINER cat /etc/ssh/ssh_host_rsa_key.pub)" > ~/.ssh/known_hosts
 - docker exec $CONTAINER cat /home/test/.ssh/id_rsa > ~/.ssh/id_rsa
 - pwd
