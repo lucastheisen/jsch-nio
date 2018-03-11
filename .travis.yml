@@ -30,6 +30,8 @@ before_install:
 - find ~/.ssh -type d -exec chmod 700 {} +
 - ls -al ~/.ssh/
 - ls -al /tmp/test/.ssh
+- ps -aef
+- netstat -ao | grep 2222
 - ssh -p 2222 -o "HostKeyAlgorithms=ssh-rsa-cert-v01@openssh.com,ssh-rsa-cert-v00@openssh.com,ssh-rsa" -o "IdentityFile=~/.ssh/id_rsa" -o "UserKnownHostsFile=~/.ssh/known_hosts" -vvv  -vvv test@localhost echo hello
 - cp src/test/resources/.travis.configuration.properties src/test/resources/configuration.properties
 
