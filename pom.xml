@@ -9,7 +9,7 @@
 
   <groupId>com.pastdev</groupId>
   <artifactId>jsch-nio</artifactId>
-  <version>1.0.10-SNAPSHOT</version>
+  <version>1.0.10</version>
   <packaging>jar</packaging>
 
   <name>JSch NIO FileSystem Implementation</name>
@@ -27,7 +27,7 @@
     <connection>scm:git:git://github.com/lucastheisen/jsch-nio.git</connection>
     <developerConnection>scm:git:git@github.com:lucastheisen/jsch-nio.git</developerConnection>
     <url>http://github.com/lucastheisen/jsch-nio</url>
-    <tag>HEAD</tag>
+    <tag>jsch-nio-1.0.10</tag>
   </scm>
 
   <organization>
