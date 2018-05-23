@@ -4,6 +4,7 @@ package com.pastdev.jsch.nio.file;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.math.BigDecimal;
 import java.net.URI;
 import java.nio.ByteBuffer;
 import java.nio.channels.Channels;
@@ -829,7 +830,7 @@ public class UnixSshFileSystemProvider extends AbstractSshFileSystemProvider {
     private enum SupportedAttribute {
         creationTime("%W", "%B", FileTime.class),
         group("%G", "%Sg", GroupPrincipal.class),
-        fileKey("%i", "%i", Long.TYPE),
+        fileKey("%i", "%i", BigDecimal.class),
         lastAccessTime("%X", "%a", FileTime.class),
         lastModifiedTime("%Y", "%m", FileTime.class),
         lastChangedTime("%Z", "%c", FileTime.class),
@@ -909,6 +910,9 @@ public class UnixSshFileSystemProvider extends AbstractSshFileSystemProvider {
             }
             if ( valueClass == Long.TYPE ) {
                 return Long.parseLong( value );
+            }
+            if ( valueClass == BigDecimal.class ) {
+                return new BigDecimal( value );
             }
             if ( valueClass == FileTime.class ) {
                 long seconds = 0;
