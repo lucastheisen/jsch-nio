@@ -40,17 +40,22 @@ import java.nio.file.attribute.PosixFilePermission;
 import java.nio.file.attribute.PosixFilePermissions;
 import java.nio.file.attribute.UserPrincipal;
 import java.text.SimpleDateFormat;
-import java.util.*;
-
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 
 import com.jcraft.jsch.JSchException;
 import com.pastdev.jsch.command.CommandRunner;
 import com.pastdev.jsch.command.CommandRunner.ChannelExecWrapper;
 import com.pastdev.jsch.command.CommandRunner.ExecuteResult;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 
 public class UnixSshFileSystemProvider extends AbstractSshFileSystemProvider {
