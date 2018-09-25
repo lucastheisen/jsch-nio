@@ -466,18 +466,21 @@ public class UnixSshFileSystemTest extends FileSystemTestUtils {
         final String filename2 = "silly2.txt";
         final String filename3 = "silly3.txt";
         final String filename4 = "silly4.txt";
+        final String dotfilename = ".silly.txt";
 
         File rootDir = new File( filesystemPath, root );
         File file1 = new File( rootDir, filename1 );
         File file2 = new File( rootDir, filename2 );
         File file3 = new File( rootDir, filename3 );
         File file4 = new File( rootDir, filename4 );
+        File dotfile = new File( rootDir, dotfilename );
         try {
             rootDir.mkdirs();
             IOUtils.writeFile( file1, expected, UTF8 );
             IOUtils.writeFile( file2, expected, UTF8 );
             IOUtils.writeFile( file3, expected, UTF8 );
             IOUtils.writeFile( file4, expected, UTF8 );
+            IOUtils.writeFile( dotfile, expected, UTF8 );
         }
         catch ( IOException e ) {
             logger.error( "could not write files to {}: {}", rootDir, e );
@@ -488,11 +491,12 @@ public class UnixSshFileSystemTest extends FileSystemTestUtils {
         UnixSshPath rootPath = (UnixSshPath) FileSystems.getFileSystem( uri ).getPath( root );
         try {
             Map<UnixSshPath, PosixFileAttributes> map = rootPath.getFileSystem().provider().statDirectory( rootPath );
-            assertEquals( 4, map.size() );
+            assertEquals( 5, map.size() );
             assertTrue( map.containsKey( FileSystems.getFileSystem( uri ).getPath( filename1 ) ) );
             assertTrue( map.containsKey( FileSystems.getFileSystem( uri ).getPath( filename2 ) ) );
             assertTrue( map.containsKey( FileSystems.getFileSystem( uri ).getPath( filename3 ) ) );
             assertTrue( map.containsKey( FileSystems.getFileSystem( uri ).getPath( filename4 ) ) );
+            assertTrue( map.containsKey( FileSystems.getFileSystem( uri ).getPath( dotfilename ) ) );
         }
         catch ( IOException e ) {
             logger.error( "could not stat directory {}: {}", rootDir, e );
