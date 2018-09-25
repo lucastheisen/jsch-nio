@@ -151,18 +151,21 @@ public class UnixSshFileSystemTest extends FileSystemTestUtils {
         final String filename2 = "silly2.txt";
         final String filename3 = "silly3.txt";
         final String filename4 = "silly4.txt";
+        final String dotfilename = ".sillly.txt";
 
         File rootDir = new File( filesystemPath, root );
         File file1 = new File( rootDir, filename1 );
         File file2 = new File( rootDir, filename2 );
         File file3 = new File( rootDir, filename3 );
         File file4 = new File( rootDir, filename4 );
+        File dotfile = new File( rootDir, dotfilename );
         try {
             rootDir.mkdirs();
             IOUtils.writeFile( file1, expected, UTF8 );
             IOUtils.writeFile( file2, expected, UTF8 );
             IOUtils.writeFile( file3, expected, UTF8 );
             IOUtils.writeFile( file4, expected, UTF8 );
+            IOUtils.writeFile( dotfile, expected, UTF8 );
         }
         catch ( IOException e ) {
             logger.error( "could not write files to {}: {}", rootDir, e );
@@ -176,6 +179,7 @@ public class UnixSshFileSystemTest extends FileSystemTestUtils {
         expectedEntries.add( rootPath.resolve( filename2 ).toString() );
         expectedEntries.add( rootPath.resolve( filename3 ).toString() );
         expectedEntries.add( rootPath.resolve( filename4 ).toString() );
+        expectedEntries.add( rootPath.resolve( dotfilename ).toString() );
 
         try {
             DirectoryStream<Path> directoryStream = null;
@@ -207,7 +211,7 @@ public class UnixSshFileSystemTest extends FileSystemTestUtils {
             fail( "could not obtain directory stream from " + rootPath + ": " + e.getMessage() );
         }
         finally {
-            IOUtils.deleteFiles( file1, file1, file3, file4, rootDir );
+            IOUtils.deleteFiles( file1, file1, file3, file4, dotfile, rootDir );
         }
     }
 
