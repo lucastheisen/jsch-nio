@@ -1,6 +1,13 @@
 package com.pastdev.jsch.nio.file;
 
 
+import com.jcraft.jsch.JSchException;
+import com.pastdev.jsch.command.CommandRunner;
+import com.pastdev.jsch.command.CommandRunner.ChannelExecWrapper;
+import com.pastdev.jsch.command.CommandRunner.ExecuteResult;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -11,51 +18,11 @@ import java.nio.channels.Channels;
 import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.SeekableByteChannel;
 import java.nio.channels.WritableByteChannel;
-import java.nio.file.AccessDeniedException;
-import java.nio.file.AccessMode;
-import java.nio.file.AtomicMoveNotSupportedException;
-import java.nio.file.CopyOption;
-import java.nio.file.DirectoryNotEmptyException;
-import java.nio.file.DirectoryStream;
+import java.nio.file.*;
 import java.nio.file.DirectoryStream.Filter;
-import java.nio.file.FileAlreadyExistsException;
-import java.nio.file.FileStore;
-import java.nio.file.FileSystem;
-import java.nio.file.FileSystemNotFoundException;
-import java.nio.file.LinkOption;
-import java.nio.file.NoSuchFileException;
-import java.nio.file.OpenOption;
-import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
-import java.nio.file.StandardOpenOption;
-import java.nio.file.attribute.BasicFileAttributeView;
-import java.nio.file.attribute.BasicFileAttributes;
-import java.nio.file.attribute.FileAttribute;
-import java.nio.file.attribute.FileAttributeView;
-import java.nio.file.attribute.FileTime;
-import java.nio.file.attribute.GroupPrincipal;
-import java.nio.file.attribute.PosixFileAttributeView;
-import java.nio.file.attribute.PosixFileAttributes;
-import java.nio.file.attribute.PosixFilePermission;
-import java.nio.file.attribute.PosixFilePermissions;
-import java.nio.file.attribute.UserPrincipal;
+import java.nio.file.attribute.*;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-
-
-import com.jcraft.jsch.JSchException;
-import com.pastdev.jsch.command.CommandRunner;
-import com.pastdev.jsch.command.CommandRunner.ChannelExecWrapper;
-import com.pastdev.jsch.command.CommandRunner.ExecuteResult;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import java.util.*;
 
 
 public class UnixSshFileSystemProvider extends AbstractSshFileSystemProvider {
@@ -481,6 +448,12 @@ public class UnixSshFileSystemProvider extends AbstractSshFileSystemProvider {
                 int localRead;
                 while (bytes.hasRemaining() && (localRead = inChannel.read( bytes )) > 0) {
                     read += localRead;
+                }
+            }
+            finally {
+                int exitCode = sshChannel.close();
+                if ( exitCode != 0 ) {
+                    throw new IOException( "dd failed " + exitCode );
                 }
             }
             return read;
