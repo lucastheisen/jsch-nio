@@ -483,6 +483,12 @@ public class UnixSshFileSystemProvider extends AbstractSshFileSystemProvider {
                     read += localRead;
                 }
             }
+            finally {
+                int exitCode = sshChannel.close();
+                if ( exitCode != 0 ) {
+                    throw new IOException( "dd failed " + exitCode );
+                }
+            }
             return read;
         }
         catch ( JSchException e ) {
