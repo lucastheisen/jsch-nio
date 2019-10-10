@@ -340,7 +340,7 @@ public class UnixSshFileSystemProvider extends AbstractSshFileSystemProvider {
     public DirectoryStream<Path> newDirectoryStream( Path path, Filter<? super Path> filter ) throws IOException {
         UnixSshPath unixPath = checkPath( path );
         String result = executeForStdout( unixPath, unixPath.getFileSystem().getCommand( "ls" )
-                + " --almost-all -1 " + unixPath.toAbsolutePath().quotedString() );
+                + " -A -1 " + unixPath.toAbsolutePath().quotedString() );
         String[] items = result.split( "\n" );
         if ( items.length == 1 && items[0].isEmpty() ) {
             items = null;
